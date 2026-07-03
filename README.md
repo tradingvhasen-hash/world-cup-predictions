@@ -27,8 +27,9 @@ Open `index.html`, or serve the folder:
 ```
 python3 -m http.server 8000
 ```
-Then visit <http://localhost:8000>. It also deploys to GitHub Pages at
-<https://yocf20.github.io/Claude/>.
+Then visit <http://localhost:8000>. It also deploys automatically to GitHub
+Pages whenever `main` is updated (see `.github/workflows/deploy-pages.yml`);
+the live URL appears in the repo's **Settings → Pages** once enabled.
 
 ## Project layout
 ```

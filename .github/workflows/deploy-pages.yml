@@ -6,7 +6,6 @@ on:
   push:
     branches:
       - main
-      - claude/salon-money-tracker-BSE5X
   workflow_dispatch:
 
 permissions:
