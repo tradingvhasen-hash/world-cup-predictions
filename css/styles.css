@@ -1,0 +1,183 @@
+/* ============================================================================
+   World Cup Predictions — styles (mobile-first)
+   Palette: deep pitch green + gold, light neutral background.
+   ========================================================================== */
+:root{
+  --green:#0b3d2e;      /* deep pitch green */
+  --green-2:#12664a;
+  --gold:#f2c14e;
+  --bg:#f4f6f5;
+  --card:#ffffff;
+  --ink:#12211b;
+  --muted:#6b7d76;
+  --line:#e6ebe8;
+  --good:#1a8f5b;
+  --bad:#c94141;
+  --live:#e23b3b;
+  --shadow:0 2px 10px rgba(12,40,30,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg); color:var(--ink); line-height:1.4;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- top bar ---------- */
+.topbar{
+  position:sticky; top:0; z-index:30;
+  display:flex; align-items:center; gap:12px;
+  background:var(--green); color:#fff;
+  padding:14px 16px; box-shadow:var(--shadow);
+}
+.brand{font-weight:700; font-size:1.05rem; letter-spacing:.2px}
+.brand-emoji{margin-right:2px}
+.topbar-spacer{flex:1}
+.burger{
+  background:none; border:0; width:28px; height:22px; padding:0; cursor:pointer;
+  display:flex; flex-direction:column; justify-content:space-between;
+}
+.burger span{display:block; height:2px; background:#fff; border-radius:2px}
+
+/* ---------- side menu ---------- */
+.side-menu{
+  position:fixed; top:0; left:0; bottom:0; width:250px; z-index:50;
+  background:var(--green); color:#fff; padding:20px 14px;
+  transform:translateX(-105%); transition:transform .25s ease;
+  display:flex; flex-direction:column; gap:6px;
+}
+.side-menu.open{transform:translateX(0)}
+.menu-title{font-size:.8rem; text-transform:uppercase; letter-spacing:1px;
+  color:var(--gold); margin:4px 8px 12px}
+.nav{
+  display:flex; align-items:center; gap:12px;
+  background:none; border:0; color:#fff; text-align:left;
+  padding:13px 12px; border-radius:10px; font-size:1rem; cursor:pointer;
+}
+.nav:hover{background:rgba(255,255,255,.08)}
+.nav.active{background:var(--green-2)}
+.nav-ic{width:22px; text-align:center}
+.menu-foot{margin-top:auto; font-size:.75rem; color:rgba(255,255,255,.6); padding:8px}
+.backdrop{
+  position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:40;
+  opacity:0; pointer-events:none; transition:opacity .25s;
+}
+.backdrop.show{opacity:1; pointer-events:auto}
+
+/* ---------- layout ---------- */
+.view{max-width:680px; margin:0 auto}
+.page{padding:16px 14px 60px}
+.section-title{
+  display:flex; align-items:center; gap:8px;
+  font-size:1.05rem; margin:22px 4px 12px; color:var(--green);
+}
+.muted{color:var(--muted); font-size:.9rem; margin:4px 4px 14px}
+
+/* ---------- score strip ---------- */
+.score-strip{
+  display:flex; align-items:center; justify-content:space-between;
+  background:linear-gradient(120deg,var(--green),var(--green-2));
+  color:#fff; border-radius:14px; padding:16px 18px; box-shadow:var(--shadow);
+}
+.score-strip-label{opacity:.85; font-size:.9rem}
+.score-strip-value{font-size:1.5rem; font-weight:800; color:var(--gold)}
+
+/* ---------- match cards ---------- */
+.match-card{
+  background:var(--card); border:1px solid var(--line); border-radius:14px;
+  padding:14px; margin-bottom:12px; box-shadow:var(--shadow);
+}
+.match-card.live{border-color:#f3c7c7; box-shadow:0 2px 14px rgba(226,59,59,.12)}
+.match-meta{font-size:.78rem; color:var(--muted); margin-bottom:10px}
+.match-row{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.team{display:flex; flex-direction:column; align-items:center; gap:6px; width:88px}
+.flag{width:52px; height:auto; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.team-name{font-size:.82rem; font-weight:600; text-align:center}
+
+/* flag fallback badge (shown only if the flag image fails to load) */
+.flag-fallback{
+  align-items:center; justify-content:center;
+  background:var(--green-2); color:#fff; font-weight:800; border-radius:4px;
+  font-size:.7rem; letter-spacing:.5px;
+}
+.flag-fallback.flag{width:52px; height:34px}
+.flag-fallback.flag-sm{width:26px; height:18px; font-size:.6rem}
+.flag-fallback.flag-xs{width:18px; height:12px; font-size:.5rem}
+
+.score-live,.score-final{
+  font-size:1.5rem; font-weight:800; text-align:center; min-width:80px;
+  display:flex; flex-direction:column; align-items:center; color:var(--green);
+}
+.pens{font-size:.7rem; color:var(--muted); font-weight:600}
+.minute{font-size:.72rem; color:var(--live); font-weight:700; margin-top:2px}
+
+/* ---------- prediction inputs ---------- */
+.predict{display:flex; align-items:center; gap:6px}
+.pred-in{
+  width:46px; height:46px; text-align:center; font-size:1.2rem; font-weight:700;
+  border:1.5px solid var(--line); border-radius:10px; background:#fbfcfb;
+}
+.pred-in:focus{outline:none; border-color:var(--green-2)}
+.pred-dash{color:var(--muted); font-weight:700}
+.pred-save{
+  width:100%; margin-top:12px; padding:11px; border:0; border-radius:10px;
+  background:var(--green); color:#fff; font-weight:600; font-size:.95rem; cursor:pointer;
+}
+.pred-save:active{background:var(--green-2)}
+.pred-hint{text-align:center; font-size:.78rem; color:var(--muted); margin-top:8px}
+
+/* ---------- live event feed ---------- */
+.live-dot{width:10px; height:10px; border-radius:50%; background:var(--live);
+  box-shadow:0 0 0 0 rgba(226,59,59,.5); animation:pulse 1.4s infinite}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 rgba(226,59,59,.5)}
+  70%{box-shadow:0 0 0 8px rgba(226,59,59,0)}
+  100%{box-shadow:0 0 0 0 rgba(226,59,59,0)}
+}
+.event-feed{margin-top:12px; border-top:1px dashed var(--line); padding-top:8px}
+.event{display:flex; align-items:center; gap:8px; padding:6px 2px; font-size:.85rem}
+.event.var{color:var(--muted); font-style:italic}
+.ev-min{width:30px; color:var(--muted); font-weight:700; font-size:.78rem}
+.ev-icon{width:18px; text-align:center}
+.flag-xs{width:18px; border-radius:2px}
+
+/* ---------- bracket ---------- */
+.bracket-scroll{overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:10px}
+.bracket{display:flex; gap:18px; min-width:max-content; padding:4px}
+.round{display:flex; flex-direction:column; justify-content:space-around; min-width:140px}
+.round-title{font-size:.75rem; text-transform:uppercase; letter-spacing:.5px;
+  color:var(--muted); text-align:center; margin-bottom:10px; font-weight:700}
+.tie{background:var(--card); border:1px solid var(--line); border-radius:10px;
+  margin:10px 0; box-shadow:var(--shadow); overflow:hidden}
+.slot{display:flex; align-items:center; gap:8px; padding:9px 10px}
+.slot + .slot{border-top:1px solid var(--line)}
+.flag-sm{width:26px; height:auto; border-radius:3px}
+.slot-name{font-size:.85rem; font-weight:600}
+.slot.winner{background:#eefaf3}
+.slot.winner .slot-name{color:var(--green)}
+.slot.loser{opacity:.4; filter:grayscale(1)}
+.slot.empty .slot-name{color:var(--muted)}
+
+/* ---------- my score ---------- */
+.score-hero{text-align:center; padding:18px 0 6px}
+.score-big{font-size:3.2rem; font-weight:800; color:var(--green); line-height:1}
+.score-unit{color:var(--muted); letter-spacing:1px; text-transform:uppercase; font-size:.8rem}
+.progress{height:10px; background:var(--line); border-radius:6px; overflow:hidden; margin:14px 4px 4px}
+.progress-bar{height:100%; background:linear-gradient(90deg,var(--green-2),var(--gold))}
+
+.pred-row{background:var(--card); border:1px solid var(--line); border-radius:12px;
+  padding:12px 14px; margin-bottom:10px; box-shadow:var(--shadow)}
+.pred-row.wrong{opacity:.5; filter:grayscale(.8)}
+.row-top{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.mini-team{display:flex; flex-direction:column; align-items:center; gap:4px; width:80px;
+  font-size:.78rem; font-weight:600; text-align:center}
+.row-pred{font-size:1.3rem; font-weight:800; color:var(--green)}
+.row-meta{font-size:.75rem; color:var(--muted); margin-top:8px}
+.row-sub{font-size:.8rem; color:var(--ink); margin-top:2px}
+.badge{display:inline-block; margin-top:8px; padding:4px 10px; border-radius:20px;
+  font-size:.75rem; font-weight:700}
+.badge.good{background:#e5f7ee; color:var(--good)}
+.badge.ok{background:#eef4ff; color:#2b6cb0}
+.badge.bad{background:#fdeaea; color:var(--bad)}
+.badge.wait{background:#f0f2f1; color:var(--muted)}
