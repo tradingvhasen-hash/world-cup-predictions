@@ -40,9 +40,11 @@ function updateScoreStrip() {
 
 /* ---------- hamburger menu ---------- */
 function openMenu()  { document.getElementById('side-menu').classList.add('open');
-                       document.getElementById('backdrop').classList.add('show'); }
+                       document.getElementById('backdrop').classList.add('show');
+                       const t = document.getElementById('burger-toggle'); if (t) t.checked = true; }
 function closeMenu() { document.getElementById('side-menu').classList.remove('open');
-                       document.getElementById('backdrop').classList.remove('show'); }
+                       document.getElementById('backdrop').classList.remove('show');
+                       const t = document.getElementById('burger-toggle'); if (t) t.checked = false; }
 
 /* ---------- LIVE ENGINE ----------
    Polls ESPN every ~15s while a match is live: refreshes scores/clock in place
@@ -159,7 +161,9 @@ function fmtCountdown(ms) {
 
 /* ---------- boot ---------- */
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('menu-btn').addEventListener('click', openMenu);
+  document.getElementById('burger-toggle').addEventListener('change', (e) => {
+    e.target.checked ? openMenu() : closeMenu();
+  });
   document.getElementById('backdrop').addEventListener('click', closeMenu);
   document.querySelectorAll('.nav').forEach(b =>
     b.addEventListener('click', () => navigate(b.getAttribute('data-nav'))));
