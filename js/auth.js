@@ -27,6 +27,15 @@ async function doSignIn(email, password) {
 async function doSignOut() {
   await sb.auth.signOut();
 }
+async function doSignInGoogle() {
+  // Redirects to Google, then back to this same page; Supabase completes the
+  // session automatically on return. The redirect target must be listed in
+  // Supabase → Authentication → URL Configuration → Redirect URLs.
+  return sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + window.location.pathname },
+  });
+}
 async function doSendReset(email) {
   // The link in the email brings the user back here; Supabase must allow this
   // origin in Auth → URL Configuration → Redirect URLs.

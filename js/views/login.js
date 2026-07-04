@@ -24,6 +24,11 @@ function showLogin() {
         <button class="auth-tab ${isSignup ? 'active' : ''}" data-mode="signup">Create account</button>
       </div>
 
+      <button class="auth-google" id="google-btn" type="button">
+        <span class="g-icon">G</span> Continue with Google
+      </button>
+      <div class="auth-or"><span>or ${isSignup ? 'sign up' : 'sign in'} with email</span></div>
+
       <form id="auth-form" class="auth-form">
         <label class="auth-label">Email
           <input type="email" id="auth-email" class="auth-input" autocomplete="email" required>
@@ -48,6 +53,7 @@ function showLogin() {
     t.addEventListener('click', () => { authMode = t.getAttribute('data-mode'); showLogin(); }));
 
   document.getElementById('auth-form').addEventListener('submit', onAuthSubmit);
+  document.getElementById('google-btn').addEventListener('click', onGoogle);
   const forgot = document.getElementById('forgot-link');
   if (forgot) forgot.addEventListener('click', onForgot);
 }
@@ -88,6 +94,13 @@ async function onAuthSubmit(e) {
     btn.disabled = false;
     btn.textContent = original;
   }
+}
+
+async function onGoogle() {
+  authMsg('', '');
+  const { error } = await doSignInGoogle();
+  if (error) authMsg(error.message, 'err');
+  // On success the browser redirects to Google; nothing else to do here.
 }
 
 async function onForgot() {
