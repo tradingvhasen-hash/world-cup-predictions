@@ -30,14 +30,16 @@ function showLogin() {
       <div class="auth-or"><span>or ${isSignup ? 'sign up' : 'sign in'} with email</span></div>
 
       <form id="auth-form" class="auth-form">
-        <label class="auth-label">Email
-          <input type="email" id="auth-email" class="auth-input" autocomplete="email" required>
-        </label>
-        <label class="auth-label">Password
-          <input type="password" id="auth-pass" class="auth-input"
+        <div class="input-group">
+          <input type="email" id="auth-email" class="input" autocomplete="email" required>
+          <label class="user-label">Email</label>
+        </div>
+        <div class="input-group">
+          <input type="password" id="auth-pass" class="input"
                  autocomplete="${isSignup ? 'new-password' : 'current-password'}"
                  minlength="6" required>
-        </label>
+          <label class="user-label">Password</label>
+        </div>
 
         <button type="submit" class="auth-submit" id="auth-submit">
           ${isSignup ? 'Create account' : 'Sign in'}

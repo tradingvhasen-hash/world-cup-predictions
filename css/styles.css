@@ -98,8 +98,8 @@ body{
 
 /* ---------- match cards ---------- */
 .match-card{
-  background:var(--card); border:1px solid var(--line); border-radius:14px;
-  padding:14px; margin-bottom:12px; box-shadow:var(--shadow);
+  background:var(--card); border:1px solid var(--line); border-radius:20px;
+  padding:16px; margin-bottom:14px; box-shadow:var(--shadow);
 }
 .match-card.live{border-color:#f3c7c7; box-shadow:0 2px 14px rgba(226,59,59,.12)}
 .match-meta{font-size:.78rem; color:var(--muted); margin-bottom:10px}
@@ -134,10 +134,12 @@ body{
 .pred-in:focus{outline:none; border-color:var(--green-2)}
 .pred-dash{color:var(--muted); font-weight:700}
 .pred-save{
-  width:100%; margin-top:12px; padding:11px; border:0; border-radius:10px;
-  background:var(--green); color:#fff; font-weight:600; font-size:.95rem; cursor:pointer;
+  width:100%; margin-top:14px; padding:13px; border:0; border-radius:14px;
+  background:var(--green); color:#fff; font-weight:700; font-size:.95rem; cursor:pointer;
+  box-shadow:0 4px 12px rgba(10,59,44,.18); transition:transform .12s, box-shadow .12s;
 }
-.pred-save:active{background:var(--green-2)}
+.pred-save:active{transform:translateY(1px); box-shadow:0 2px 6px rgba(10,59,44,.18)}
+.pred-save:disabled{opacity:.6}
 .pred-hint{text-align:center; font-size:.78rem; color:var(--muted); margin-top:8px}
 
 /* ---------- live event feed ---------- */
@@ -179,8 +181,8 @@ body{
 .progress{height:10px; background:var(--line); border-radius:6px; overflow:hidden; margin:14px 4px 4px}
 .progress-bar{height:100%; background:linear-gradient(90deg,var(--green-2),var(--gold))}
 
-.pred-row{background:var(--card); border:1px solid var(--line); border-radius:12px;
-  padding:12px 14px; margin-bottom:10px; box-shadow:var(--shadow)}
+.pred-row{background:var(--card); border:1px solid var(--line); border-radius:18px;
+  padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow)}
 .pred-row.wrong{opacity:.5; filter:grayscale(.8)}
 .row-top{display:flex; align-items:center; justify-content:space-between; gap:8px}
 .mini-team{display:flex; flex-direction:column; align-items:center; gap:4px; width:80px;
@@ -242,10 +244,28 @@ body{
 }
 .auth-input:focus{outline:none; border-color:var(--green-2)}
 .auth-submit{
-  margin-top:4px; padding:13px; border:0; border-radius:10px;
+  margin-top:6px; padding:14px; border:0; border-radius:14px;
   background:var(--green); color:#fff; font-weight:700; font-size:1rem; cursor:pointer;
+  box-shadow:0 4px 14px rgba(10,59,44,.22); transition:transform .12s, box-shadow .12s;
 }
-.auth-submit:active{background:var(--green-2)}
+.auth-submit:active{transform:translateY(1px); box-shadow:0 2px 7px rgba(10,59,44,.22)}
+
+/* Floating-label inputs — Uiverse.io by alexruix (recoloured to theme) */
+.input-group{position:relative; margin-bottom:4px}
+.input{
+  width:100%; border:solid 1.5px var(--line); border-radius:12px; background:none;
+  padding:15px 14px; font-size:1rem; color:var(--ink);
+  transition:border 150ms cubic-bezier(0.4,0,0.2,1);
+}
+.user-label{
+  position:absolute; left:12px; top:0; color:var(--muted); pointer-events:none;
+  transform:translateY(15px); transition:150ms cubic-bezier(0.4,0,0.2,1);
+  background:var(--card); padding:0 5px; font-size:1rem;
+}
+.input:focus{outline:none; border:1.5px solid var(--green-2)}
+.input:focus ~ .user-label, .input:valid ~ .user-label{
+  transform:translateY(-9px) scale(.82); color:var(--green-2);
+}
 .auth-submit:disabled{opacity:.6; cursor:default}
 .auth-link{
   display:block; margin:14px auto 0; background:none; border:0; cursor:pointer;
@@ -276,12 +296,14 @@ body{
 /* ---------- prediction stepper ---------- */
 .predict-row{display:flex; align-items:center; justify-content:center; gap:14px; margin-top:14px}
 .stepper{display:flex; align-items:center; gap:8px}
+/* Tactile neumorphic stepper buttons (soft, press-in) — Uiverse ke1221 vibe */
 .step-btn{
-  width:40px; height:40px; border:1.5px solid var(--line); background:#fbfcfb;
-  border-radius:11px; font-size:1.35rem; font-weight:700; color:var(--green);
+  width:42px; height:42px; border:none; background:#eef1ef;
+  border-radius:12px; font-size:1.35rem; font-weight:700; color:var(--green);
   cursor:pointer; line-height:1; display:flex; align-items:center; justify-content:center;
+  box-shadow:4px 4px 8px #dadedc, -4px -4px 8px #ffffff; transition:box-shadow .15s;
 }
-.step-btn:active{background:var(--green); color:#fff; border-color:var(--green)}
+.step-btn:active{box-shadow:inset 3px 3px 7px #dadedc, inset -3px -3px 7px #ffffff}
 .step-val{min-width:30px; text-align:center; font-size:1.5rem; font-weight:800; color:var(--green)}
 
 /* ---------- countdown ---------- */
@@ -300,8 +322,8 @@ body{
 .lineup-select{width:100%; padding:11px; border:1.5px solid var(--line); border-radius:10px;
   font-size:.95rem; background:#fbfcfb; margin-bottom:14px}
 .lineups{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-.lineup-col{background:var(--card); border:1px solid var(--line); border-radius:12px;
-  padding:12px 10px; box-shadow:var(--shadow)}
+.lineup-col{background:var(--card); border:1px solid var(--line); border-radius:16px;
+  padding:14px 12px; box-shadow:var(--shadow)}
 .lineup-team{display:flex; align-items:center; gap:8px; font-weight:700; font-size:.85rem}
 .lineup-team .flag-sm{width:24px}
 .lineup-formation{color:var(--muted); font-size:.78rem; margin:4px 0 4px}
