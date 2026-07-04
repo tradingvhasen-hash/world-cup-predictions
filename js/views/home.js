@@ -1,8 +1,7 @@
 /* ============================================================================
-   HOME VIEW  —  one clean, uniform row per match. Simple.
-   Live / upcoming / finished all share the same slim row; only the middle
-   differs (live score · prediction inputs · final score). Predictions
-   auto-save, so there are no buttons.
+   HOME VIEW  —  tap a team's flag to add a goal (⚽). Hold to reset.
+   Live / finished matches show as clean uniform rows; upcoming matches are
+   predicted by tapping flags — no number boxes, no steppers. Auto-saves.
    ========================================================================== */
 
 function renderHome() {
@@ -32,8 +31,12 @@ function renderHome() {
   }
 
   html += `<h2 class="section-title">Next up</h2>`;
-  html += upcoming.length ? upcoming.map(predictRow).join('')
-                          : `<p class="muted">No upcoming matches right now.</p>`;
+  if (upcoming.length) {
+    html += `<p class="muted tap-hint">Tap a flag to add a goal ⚽ · hold to reset</p>`;
+    html += upcoming.map(predictRow).join('');
+  } else {
+    html += `<p class="muted">No upcoming matches right now.</p>`;
+  }
 
   if (finished.length) {
     html += `<h2 class="section-title">Results</h2>`;
@@ -44,13 +47,13 @@ function renderHome() {
   return html;
 }
 
+/* ---- live + result: clean uniform rows ---- */
 function sideTeam(code, right) {
   return `<div class="mrow-team${right ? ' right' : ''}">
     ${right ? `<span>${teamName(code)}</span>${flagImg(code, 'flag')}`
             : `${flagImg(code, 'flag')}<span>${teamName(code)}</span>`}
   </div>`;
 }
-
 function liveRow(m) {
   return `<div class="mrow live" id="live-${m.id}">
       ${sideTeam(m.home, false)}
@@ -62,7 +65,6 @@ function liveRow(m) {
     </div>
     <div class="event-feed" id="feed-${m.id}"></div>`;
 }
-
 function resultRow(m) {
   return `<div class="mrow">
     ${sideTeam(m.home, false)}
@@ -71,22 +73,34 @@ function resultRow(m) {
   </div>`;
 }
 
+/* ---- upcoming: tap-a-flag prediction ---- */
 function predictRow(m) {
   const p = getPrediction(m.id);
-  const hv = p ? p.home : '';
-  const av = p ? p.away : '';
-  return `<div class="mrow" data-match="${m.id}">
-    ${sideTeam(m.home, false)}
+  const hv = p ? p.home : 0;
+  const av = p ? p.away : 0;
+  return `<div class="mrow predict" data-match="${m.id}">
+    <div class="tapteam" id="tap-h-${m.id}">
+      ${flagImg(m.home, 'flag')}
+      <span class="team-name">${teamName(m.home)}</span>
+      <div class="balls" id="balls-h-${m.id}">${ballsHtml(hv)}</div>
+    </div>
     <div class="mrow-mid">
-      <div class="sc-inputs">
-        <input class="sc-in" id="ph-${m.id}" type="number" min="0" max="99" inputmode="numeric" value="${hv}" aria-label="${teamName(m.home)} score">
-        <span class="sc-sep">–</span>
-        <input class="sc-in" id="pa-${m.id}" type="number" min="0" max="99" inputmode="numeric" value="${av}" aria-label="${teamName(m.away)} score">
-      </div>
+      <div class="tap-score"><span id="ph-${m.id}">${hv}</span> – <span id="pa-${m.id}">${av}</span></div>
       <div class="mrow-time ${p ? 'saved' : ''}" id="hint-${m.id}">${p ? '✓ saved' : timeShort(m.kickoff)}</div>
     </div>
-    ${sideTeam(m.away, true)}
+    <div class="tapteam" id="tap-a-${m.id}">
+      ${flagImg(m.away, 'flag')}
+      <span class="team-name">${teamName(m.away)}</span>
+      <div class="balls" id="balls-a-${m.id}">${ballsHtml(av)}</div>
+    </div>
   </div>`;
+}
+
+function ballsHtml(n) {
+  if (!n) return `<span class="ball-hint">–</span>`;
+  let s = '';
+  for (let i = 0; i < n; i++) s += `<span class="ball${i === n - 1 ? ' pop' : ''}">⚽</span>`;
+  return s;
 }
 
 function timeShort(iso) {
@@ -97,6 +111,8 @@ function timeShort(iso) {
 }
 
 /* ---- wire up ---- */
+let tapSaveTimers = {};
+
 function bindHome() {
   if (!matchesLoaded) {
     const retry = document.getElementById('retry-load');
@@ -105,22 +121,55 @@ function bindHome() {
     return;
   }
 
-  // Auto-save a prediction when both score boxes are filled.
-  document.querySelectorAll('.mrow[data-match]').forEach(row => {
+  document.querySelectorAll('.mrow.predict').forEach(row => {
     const id = row.getAttribute('data-match');
-    row.querySelectorAll('.sc-in').forEach(inp => {
-      inp.addEventListener('change', async () => {
-        const h = document.getElementById('ph-' + id).value;
-        const a = document.getElementById('pa-' + id).value;
-        const hint = document.getElementById('hint-' + id);
-        if (h === '' || a === '') return;
-        const ok = await setPrediction(id, h, a);
-        hint.textContent = ok ? '✓ saved' : 'not saved';
-        hint.className = 'mrow-time ' + (ok ? 'saved' : 'err');
-        updateScoreStrip();
-      });
-    });
+    attachTap(document.getElementById('tap-h-' + id),
+      () => bumpGoal(id, 'h', 1), () => setGoal(id, 'h', 0));
+    attachTap(document.getElementById('tap-a-' + id),
+      () => bumpGoal(id, 'a', 1), () => setGoal(id, 'a', 0));
   });
 
   startLiveEngine();
+}
+
+/* tap = onTap; long-press (500ms) = onHold */
+function attachTap(el, onTap, onHold) {
+  if (!el) return;
+  let held = false, timer = null;
+  const start = () => { held = false; timer = setTimeout(() => { held = true; onHold(); }, 500); };
+  const cancel = () => { if (timer) clearTimeout(timer); };
+  el.addEventListener('touchstart', start, { passive: true });
+  el.addEventListener('touchend', cancel);
+  el.addEventListener('touchmove', cancel, { passive: true });
+  el.addEventListener('mousedown', start);
+  el.addEventListener('mouseup', cancel);
+  el.addEventListener('mouseleave', cancel);
+  el.addEventListener('click', () => { if (!held) onTap(); });
+}
+
+function bumpGoal(id, side, delta) {
+  const span = document.getElementById((side === 'h' ? 'ph-' : 'pa-') + id);
+  const v = Math.max(0, Math.min(20, parseInt(span.textContent || '0', 10) + delta));
+  applyGoal(id, side, v);
+}
+function setGoal(id, side, v) { applyGoal(id, side, v); }
+
+function applyGoal(id, side, v) {
+  document.getElementById((side === 'h' ? 'ph-' : 'pa-') + id).textContent = v;
+  document.getElementById('balls-' + side + '-' + id).innerHTML = ballsHtml(v);
+  autoSaveTap(id);
+}
+
+function autoSaveTap(id) {
+  const hint = document.getElementById('hint-' + id);
+  hint.textContent = 'saving…'; hint.className = 'mrow-time';
+  clearTimeout(tapSaveTimers[id]);
+  tapSaveTimers[id] = setTimeout(async () => {
+    const h = document.getElementById('ph-' + id).textContent;
+    const a = document.getElementById('pa-' + id).textContent;
+    const ok = await setPrediction(id, h, a);
+    hint.textContent = ok ? '✓ saved' : 'not saved';
+    hint.className = 'mrow-time ' + (ok ? 'saved' : 'err');
+    updateScoreStrip();
+  }, 500);
 }
