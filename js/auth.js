@@ -63,10 +63,16 @@ function applyAuthState() {
   if (currentUser) {
     body.classList.remove('logged-out');
     fillMenuUser();
-    if (!appStarted) { appStarted = true; navigate('home'); }
+    // First sign-in of this page load: fetch the user's saved predictions from
+    // the database, then show the app.
+    if (!appStarted) {
+      appStarted = true;
+      loadPredictionsFromDb().then(() => navigate('home'));
+    }
   } else {
     body.classList.add('logged-out');
     appStarted = false;
+    clearPredictions();
     showLogin();
   }
 }

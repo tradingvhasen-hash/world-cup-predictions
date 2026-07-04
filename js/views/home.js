@@ -94,17 +94,21 @@ function matchHeader(m, middle) {
 /* ---- wire up the Save buttons after the view is in the DOM ---- */
 function bindHome() {
   document.querySelectorAll('[data-save]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-save');
       const h = document.getElementById('ph-' + id).value;
       const a = document.getElementById('pa-' + id).value;
+      const hint = document.getElementById('hint-' + id);
       if (h === '' || a === '') {
-        document.getElementById('hint-' + id).textContent = 'Enter both scores first';
+        hint.textContent = 'Enter both scores first';
         return;
       }
-      setPrediction(id, h, a);
-      document.getElementById('hint-' + id).textContent = 'Saved ✓';
+      btn.disabled = true;
+      hint.textContent = 'Saving…';
+      const ok = await setPrediction(id, h, a);
+      hint.textContent = ok ? 'Saved ✓' : 'Could not save — please try again';
       btn.textContent = 'Update prediction';
+      btn.disabled = false;
       updateScoreStrip();
     });
   });

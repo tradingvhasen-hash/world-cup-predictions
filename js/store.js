@@ -1,35 +1,56 @@
 /* ============================================================================
-   STORE  —  saves the user's predictions in the browser (localStorage)
+   STORE  —  the signed-in user's predictions, saved in the Supabase database
    ----------------------------------------------------------------------------
-   For now there is NO sign-in and NO server, so predictions live only on this
-   device/browser. When we add accounts + a database later, this same interface
-   ("getPrediction / setPrediction / allPredictions") will talk to the server
-   instead — the rest of the app won't need to change.
+   Predictions now live in the `predictions` table, tied to the user's account,
+   so they follow the user on any device. To keep the views simple, we load the
+   user's rows once after sign-in into an in-memory cache (`predCache`); the
+   render code reads that cache synchronously, while saving writes through to
+   the database.
 
    Scoring rules:
      • Correct winner (or draw)  = 1 point
      • Exact final score         = 3 points
    ========================================================================== */
 
-const STORE_KEY = 'wc_predictions_v1';
+/* In-memory copy of the signed-in user's predictions, keyed by match id.
+   Shape: { m4: { home: 2, away: 1 }, ... } */
+let predCache = {};
 
-function loadPredictions() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }
-  catch (e) { return {}; }
-}
-function savePredictions(obj) {
-  localStorage.setItem(STORE_KEY, JSON.stringify(obj));
+/* Load the current user's predictions from the database into predCache.
+   Called once right after sign-in (see auth.js). */
+async function loadPredictionsFromDb() {
+  predCache = {};
+  if (!sb || !currentUser) return;
+  const { data, error } = await sb
+    .from('predictions')
+    .select('match_id, home_score, away_score')
+    .eq('user_id', currentUser.id);
+  if (error) { console.warn('Could not load predictions:', error.message); return; }
+  data.forEach(r => { predCache[r.match_id] = { home: r.home_score, away: r.away_score }; });
 }
 
-function getPrediction(matchId) {
-  return loadPredictions()[matchId] || null;
+/* Forget everything (used on sign-out so the next user starts clean). */
+function clearPredictions() { predCache = {}; }
+
+function getPrediction(matchId) { return predCache[matchId] || null; }
+function allPredictions() { return predCache; }
+
+/* Save/replace a prediction: update the cache immediately (so the UI feels
+   instant), then write through to the database. Returns true on success. */
+async function setPrediction(matchId, home, away) {
+  const h = Number(home), a = Number(away);
+  predCache[matchId] = { home: h, away: a };
+  if (!sb || !currentUser) return false;
+  const { error } = await sb.from('predictions').upsert({
+    user_id: currentUser.id,
+    match_id: matchId,
+    home_score: h,
+    away_score: a,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) { console.warn('Could not save prediction:', error.message); return false; }
+  return true;
 }
-function setPrediction(matchId, home, away) {
-  const all = loadPredictions();
-  all[matchId] = { home: Number(home), away: Number(away) };
-  savePredictions(all);
-}
-function allPredictions() { return loadPredictions(); }
 
 /* Given a prediction and a finished match, return points + a verdict. */
 function scorePrediction(pred, match) {
@@ -45,10 +66,9 @@ function scorePrediction(pred, match) {
 
 /* Total points across all finished matches. */
 function totalScore() {
-  const preds = loadPredictions();
   let total = 0;
   MATCHES.forEach(m => {
-    const p = preds[m.id];
+    const p = predCache[m.id];
     if (p) total += scorePrediction(p, m).points;
   });
   return total;
