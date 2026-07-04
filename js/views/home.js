@@ -1,10 +1,12 @@
 /* ============================================================================
    HOME VIEW
-   - Live matches (only while a game is actually being played)
-   - "Next up": the next 3 matches — tap a flag to add a goal ⚽, tap the balls
-     to remove one. Predictions auto-save and lock once the match kicks off.
-   - "Later": further fixtures, shown but not yet predictable.
-   - "Results": finished matches.
+   - Live matches (only while a game is being played)
+   - "Next up": next 3 matches — tap a flag to add a goal, tap the dots to
+     remove one; auto-saves and locks at kick-off. Countdown shows as a small
+     pill on the card's top edge.
+   - "Later": further fixtures (not yet predictable)
+   - "Results": finished matches
+   Hints are shown as small "?" tooltips, not full lines.
    ========================================================================== */
 
 function renderHome() {
@@ -30,31 +32,31 @@ function renderHome() {
   let html = `<div class="page home-page">`;
 
   if (live.length) {
-    html += `<h2 class="section-title"><span class="live-dot"></span>Live</h2>`;
+    html += sectionTitle(`<span class="live-dot"></span>Live`);
     html += live.map(liveRow).join('');
   }
 
-  html += `<h2 class="section-title">Next up</h2>`;
-  if (predictable.length) {
-    html += `<p class="muted tap-hint">Tap a flag to add a goal ⚽ · tap the balls to remove</p>`;
-    html += predictable.map(predictRow).join('');
-  } else {
-    html += `<p class="muted">No matches open for prediction right now.</p>`;
-  }
+  html += sectionTitle('Next up', 'Tap a flag to add a goal, tap the dots under it to remove one. Predictions lock when the match kicks off.');
+  html += predictable.length ? predictable.map(predictRow).join('')
+                             : `<p class="muted">No matches open for prediction right now.</p>`;
 
   if (later.length) {
-    html += `<h2 class="section-title">Later</h2>`;
-    html += `<p class="muted tap-hint">Come back closer to kick-off to predict these.</p>`;
+    html += sectionTitle('Later', 'These open for prediction closer to kick-off. Check back then.');
     html += later.map(laterRow).join('');
   }
 
   if (finished.length) {
-    html += `<h2 class="section-title">Results</h2>`;
+    html += sectionTitle('Results');
     html += finished.map(resultRow).join('');
   }
 
   html += `</div>`;
   return html;
+}
+
+function sectionTitle(label, tipText) {
+  const tip = tipText ? ` <button class="tip" type="button">?<span class="tip-bubble">${tipText}</span></button>` : '';
+  return `<h2 class="section-title">${label}${tip}</h2>`;
 }
 
 /* ---- shared row halves ---- */
@@ -85,14 +87,11 @@ function resultRow(m) {
   </div>`;
 }
 
-/* not-yet-predictable fixture (display only) */
 function laterRow(m) {
   return `<div class="mrow later">
+    <div class="cd-pill" data-kickoff="${m.kickoff}"></div>
     ${sideTeam(m.home, false)}
-    <div class="mrow-mid">
-      <div class="cd" data-kickoff="${m.kickoff}"></div>
-      <div class="later-lock">🔒 opens soon</div>
-    </div>
+    <div class="mrow-mid"><div class="later-lock">🔒</div></div>
     ${sideTeam(m.away, true)}
   </div>`;
 }
@@ -103,10 +102,10 @@ function predictRow(m) {
   const hv = p ? p.home : 0;
   const av = p ? p.away : 0;
   return `<div class="mrow predict" data-match="${m.id}">
+    <div class="cd-pill" data-kickoff="${m.kickoff}"></div>
     ${tapTeam(m.id, m.home, 'h', hv, false)}
     <div class="mrow-mid">
       <div class="tap-score"><span id="ph-${m.id}">${hv}</span> – <span id="pa-${m.id}">${av}</span></div>
-      <div class="cd" data-kickoff="${m.kickoff}"></div>
       <span class="save-flash" id="sf-${m.id}">✓ saved</span>
     </div>
     ${tapTeam(m.id, m.away, 'a', av, true)}
@@ -116,14 +115,14 @@ function predictRow(m) {
 function tapTeam(id, code, side, val, right) {
   const flag = `<button class="tapflag" id="flag-${side}-${id}" type="button" aria-label="Add goal for ${teamName(code)}">${flagImg(code, 'flag')}</button>`;
   const name = `<span class="team-name">${teamName(code)}</span>`;
-  const balls = `<button class="balls" id="balls-${side}-${id}" type="button" aria-label="Remove a goal">${ballsHtml(val)}</button>`;
-  return `<div class="tapteam${right ? ' right' : ''}">${flag}${name}${balls}</div>`;
+  const pips = `<button class="pips" id="pips-${side}-${id}" type="button" aria-label="Remove a goal">${pipsHtml(val)}</button>`;
+  return `<div class="tapteam${right ? ' right' : ''}">${flag}${name}${pips}</div>`;
 }
 
-function ballsHtml(n) {
-  if (!n) return `<span class="ball-hint">–</span>`;
+function pipsHtml(n) {
+  if (!n) return '';
   let s = '';
-  for (let i = 0; i < n; i++) s += `<span class="ball${i === n - 1 ? ' pop' : ''}">⚽</span>`;
+  for (let i = 0; i < n; i++) s += `<span class="pip${i === n - 1 ? ' pop' : ''}"></span>`;
   return s;
 }
 
@@ -142,8 +141,8 @@ function bindHome() {
     const id = row.getAttribute('data-match');
     document.getElementById('flag-h-' + id).addEventListener('click', () => bumpGoal(id, 'h', 1));
     document.getElementById('flag-a-' + id).addEventListener('click', () => bumpGoal(id, 'a', 1));
-    document.getElementById('balls-h-' + id).addEventListener('click', () => bumpGoal(id, 'h', -1));
-    document.getElementById('balls-a-' + id).addEventListener('click', () => bumpGoal(id, 'a', -1));
+    document.getElementById('pips-h-' + id).addEventListener('click', () => bumpGoal(id, 'h', -1));
+    document.getElementById('pips-a-' + id).addEventListener('click', () => bumpGoal(id, 'a', -1));
   });
 
   updateScoreStrip();
@@ -155,7 +154,7 @@ function bumpGoal(id, side, delta) {
   const span = document.getElementById((side === 'h' ? 'ph-' : 'pa-') + id);
   const v = Math.max(0, Math.min(20, parseInt(span.textContent || '0', 10) + delta));
   span.textContent = v;
-  document.getElementById('balls-' + side + '-' + id).innerHTML = ballsHtml(v);
+  document.getElementById('pips-' + side + '-' + id).innerHTML = pipsHtml(v);
   autoSaveTap(id);
 }
 

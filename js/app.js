@@ -180,12 +180,34 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('backdrop').addEventListener('click', closeMenu);
   document.querySelectorAll('.nav').forEach(b =>
     b.addEventListener('click', () => navigate(b.getAttribute('data-nav'))));
-  // Expand/collapse a live match's event feed (delegated — feeds re-render).
+  // Delegated clicks: live-feed expand, and "?" tooltips.
   document.addEventListener('click', (ev) => {
     const b = ev.target.closest('[data-expand]');
-    if (b) toggleFeed(b.getAttribute('data-expand'));
+    if (b) { toggleFeed(b.getAttribute('data-expand')); return; }
+    const tip = ev.target.closest('.tip');
+    document.querySelectorAll('.tip.open').forEach(t => { if (t !== tip) t.classList.remove('open'); });
+    if (tip) { tip.classList.toggle('open'); ev.stopPropagation(); }
   });
+  // Auto-hide the top bar: hide on scroll down, show on scroll up.
+  setupAutoHideBar();
   // Check the sign-in state first; authBoot() shows either the login screen
   // or the app (and calls navigate('home') once the user is signed in).
   authBoot();
 });
+
+function setupAutoHideBar() {
+  const bar = document.querySelector('.topbar');
+  if (!bar) return;
+  let lastY = window.scrollY, ticking = false;
+  window.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      const y = window.scrollY;
+      if (y > lastY && y > 60) bar.classList.add('hidden');        // scrolling down
+      else if (y < lastY) bar.classList.remove('hidden');          // scrolling up
+      lastY = y;
+      ticking = false;
+    });
+  }, { passive: true });
+}
