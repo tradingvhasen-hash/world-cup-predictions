@@ -14,6 +14,12 @@ then come back and fix these together. Not bugs that block progress.
 2. **Live score is stacked vertically.** "3 – 1" shows with 3 above 1, so you
    can't tell which number belongs to which team. Should read clearly left↔right
    next to each team's flag.
+10. **Event feed shows everything — collapse it.** Show only the newest ~3
+    events by default, with an arrow/expand to reveal the rest.
+11. **Event feed design is messy.** You can't tell which event belongs to which
+    team. Redesign so each event clearly shows its team (flag/side, home on
+    left / away on right), and filter out noise ("Start Delay", "End Delay",
+    "drinks break", etc.) — keep goals, cards, subs, VAR. Cleaner layout overall.
 
 ## Home page
 3. **Hamburger menu missing.** The ☰ menu we agreed on isn't visible after login.
