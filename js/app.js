@@ -72,7 +72,7 @@ async function liveTick() {
 
   // If a game started or finished, the sections change — re-render the page.
   if (liveIds() !== before) {
-    if (document.querySelector('.match-card.live')) navigate('home');
+    if (document.querySelector('.mrow.live')) navigate('home');
     return;
   }
 
