@@ -29,6 +29,12 @@ then come back and fix these together. Not bugs that block progress.
    were correct, which were wrong (greyed out), and the points earned. Make the
    correct / wrong / pending states obvious.
 
+## Login / sign-up screen
+8. **Recommend Google, small hint text.** Add a small line of text (e.g. under
+   the password field, or wherever it fits) telling users that signing in with
+   **Google is recommended** — email works too, but Google is more reliable
+   (email can sometimes fail). Wording to be refined later.
+
 ---
 
 ## Note on email confirmation (user concern)
@@ -39,4 +45,10 @@ attach a real email provider (Resend / SendGrid / etc.) and it's unlimited.
 
 For now "Confirm email" is turned OFF so accounts work instantly. The user
 prefers **Google sign-in** (no passwords, no reset, no confirmation emails,
-safer) — we plan to add it. Email+password stays as a fallback option.
+safer) — now added and working. Email+password stays as a fallback option.
+
+### ⏰ REMINDER — re-enable email confirmation later
+"Confirm email" was turned OFF in Supabase (Authentication → Providers → Email)
+so we could test without hitting the free email rate limit. Before going public,
+**turn "Confirm email" back ON** and attach a real email provider (Resend /
+SendGrid) so confirmation + password-reset emails send reliably and unlimited.
