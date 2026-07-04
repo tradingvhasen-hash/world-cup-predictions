@@ -7,7 +7,7 @@
   <title>World Cup Predictions</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
+<body class="logged-out">
   <header class="topbar">
     <button id="menu-btn" class="burger" aria-label="Open menu">
       <span></span><span></span><span></span>
@@ -21,14 +21,22 @@
     <button class="nav" data-nav="home"><span class="nav-ic">🏠</span> Home</button>
     <button class="nav" data-nav="bracket"><span class="nav-ic">🗂️</span> Bracket</button>
     <button class="nav" data-nav="score"><span class="nav-ic">⭐</span> My Score</button>
-    <div class="menu-foot">Demo data — sign-in &amp; live scores coming next</div>
+    <div class="menu-foot" id="menu-user"></div>
   </nav>
   <div id="backdrop" class="backdrop"></div>
 
   <main id="view" class="view"></main>
 
+  <!-- Login / sign-up overlay, shown when no user is signed in -->
+  <div id="auth-screen" class="auth-screen"></div>
+
+  <!-- Supabase client, vendored locally so the site never depends on a CDN -->
+  <script src="js/vendor/supabase.js"></script>
+  <script src="js/config.js"></script>
   <script src="js/data.js"></script>
   <script src="js/store.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/views/login.js"></script>
   <script src="js/views/home.js"></script>
   <script src="js/views/bracket.js"></script>
   <script src="js/views/score.js"></script>

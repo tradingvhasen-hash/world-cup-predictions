@@ -112,5 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('backdrop').addEventListener('click', closeMenu);
   document.querySelectorAll('.nav').forEach(b =>
     b.addEventListener('click', () => navigate(b.getAttribute('data-nav'))));
-  navigate('home');
+  // Check the sign-in state first; authBoot() shows either the login screen
+  // or the app (and calls navigate('home') once the user is signed in).
+  authBoot();
 });
