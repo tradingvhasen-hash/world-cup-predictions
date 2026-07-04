@@ -1,14 +1,27 @@
 /* ============================================================================
-   HOME VIEW  —  live match + next matches with score predictions
+   HOME VIEW  —  live match + next matches with score predictions (real data)
    ========================================================================== */
 
 function renderHome() {
-  const live     = MATCHES.filter(m => m.status === 'live');
-  const upcoming = MATCHES.filter(m => m.status === 'upcoming')
-                          .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
-  const finished = MATCHES.filter(m => m.status === 'finished');
+  // Data loads asynchronously from ESPN; show states while it arrives.
+  if (!matchesLoaded) {
+    if (matchesError) {
+      return `<div class="page home-page"><div class="score-strip">
+          <span class="score-strip-label">Your prediction score</span>
+          <span class="score-strip-value">${totalScore()} pts</span></div>
+        <p class="muted">Couldn't load live matches. Check your connection.</p>
+        <button class="pred-save" id="retry-load">Try again</button></div>`;
+    }
+    return `<div class="page home-page">
+      <div class="loading">Loading live World Cup…</div></div>`;
+  }
 
-  let html = `<div class="page">
+  const live     = MATCHES.filter(m => m.status === 'live');
+  const upcoming = MATCHES.filter(m => m.status === 'upcoming' && hasRealTeams(m)).slice(0, 10);
+  const finished = MATCHES.filter(m => m.status === 'finished' && hasRealTeams(m))
+                          .sort((a, b) => new Date(b.kickoff) - new Date(a.kickoff)).slice(0, 10);
+
+  let html = `<div class="page home-page">
     <div class="score-strip">
       <span class="score-strip-label">Your prediction score</span>
       <span class="score-strip-value">${totalScore()} pts</span>
@@ -20,10 +33,11 @@ function renderHome() {
   }
 
   html += `<h2 class="section-title">Next matches</h2>`;
-  html += upcoming.map(predictCard).join('');
+  html += upcoming.length ? upcoming.map(predictCard).join('')
+                          : `<p class="muted">No upcoming matches right now.</p>`;
 
   if (finished.length) {
-    html += `<h2 class="section-title">Results</h2>`;
+    html += `<h2 class="section-title">Recent results</h2>`;
     html += finished.map(resultCard).join('');
   }
 
@@ -31,10 +45,10 @@ function renderHome() {
   return html;
 }
 
-/* ---- one live match card (updated every second by the live engine) ---- */
+/* ---- one live match card (updated by the live engine) ---- */
 function liveCard(m) {
   return `<div class="match-card live" id="live-${m.id}" data-match="${m.id}">
-    ${matchHeader(m, `<span class="minute" id="min-${m.id}">LIVE</span>`)}
+    ${matchHeader(m, `<span class="minute" id="min-${m.id}">${m.minute || 'LIVE'}</span>`)}
     <div class="event-feed" id="feed-${m.id}"></div>
   </div>`;
 }
@@ -64,12 +78,11 @@ function predictCard(m) {
 
 /* ---- finished match result ---- */
 function resultCard(m) {
-  const pen = m.penalties ? ` <span class="pens">(${m.penalties.home}-${m.penalties.away} pens)</span>` : '';
   return `<div class="match-card result" data-match="${m.id}">
     <div class="match-meta">${m.stage} · ${fmtDate(m.kickoff)} · Full time</div>
     <div class="match-row">
       ${teamBlock(m.home)}
-      <div class="score-final">${m.homeScore} – ${m.awayScore}${pen}</div>
+      <div class="score-final">${m.homeScore} – ${m.awayScore}</div>
       ${teamBlock(m.away)}
     </div>
   </div>`;
@@ -86,13 +99,23 @@ function matchHeader(m, middle) {
   return `<div class="match-meta">${m.stage} · ${fmtDate(m.kickoff)}</div>
     <div class="match-row">
       ${teamBlock(m.home)}
-      <div class="score-live"><span id="hs-${m.id}">0</span> – <span id="as-${m.id}">0</span>${middle}</div>
+      <div class="score-live"><span id="hs-${m.id}">${m.homeScore ?? 0}</span> – <span id="as-${m.id}">${m.awayScore ?? 0}</span>${middle}</div>
       ${teamBlock(m.away)}
     </div>`;
 }
 
-/* ---- wire up the Save buttons after the view is in the DOM ---- */
+/* ---- wire up after the view is in the DOM ---- */
 function bindHome() {
+  // Not loaded yet: trigger the fetch, then re-render.
+  if (!matchesLoaded) {
+    const retry = document.getElementById('retry-load');
+    if (retry) retry.addEventListener('click', () => { matchesError = false; navigate('home'); });
+    refreshMatches()
+      .then(() => navigate('home'))
+      .catch(() => { matchesError = true; navigate('home'); });
+    return;
+  }
+
   document.querySelectorAll('[data-save]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-save');

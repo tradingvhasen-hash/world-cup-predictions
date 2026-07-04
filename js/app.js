@@ -5,8 +5,8 @@
 /* ---------- date formatting ---------- */
 function fmtDate(iso) {
   const dt = new Date(iso);
-  const today = new Date(2026, 6, 3);           // demo "today"
-  const sameDay = dt.toDateString() === today.toDateString();
+  const now = new Date();
+  const sameDay = dt.toDateString() === now.toDateString();
   const time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   if (sameDay) return `Today ${time}`;
   const date = dt.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
@@ -43,66 +43,67 @@ function closeMenu() { document.getElementById('side-menu').classList.remove('op
                        document.getElementById('backdrop').classList.remove('show'); }
 
 /* ---------- LIVE ENGINE ----------
-   Plays the scripted LIVE_TIMELINE against a fast demo clock so we can see the
-   score change live, cards appear, and a VAR-disallowed goal revert the score.
+   Polls ESPN every ~15s while a match is live: refreshes scores/clock in place
+   and pulls the latest goal/card/sub events into each live card's feed. If the
+   set of live matches changes (a game starts or ends), re-render the page.
 */
 let liveTimer = null;
-let liveStart = 0;
 
 function startLiveEngine() {
-  const liveMatches = MATCHES.filter(m => m.status === 'live');
-  if (!liveMatches.length) return;
-  liveStart = Date.now();
-  tickLive();
-  liveTimer = setInterval(tickLive, 1000);
+  if (!MATCHES.some(m => m.status === 'live')) return;
+  liveTick();
+  liveTimer = setInterval(liveTick, 15000);
 }
 function stopLiveEngine() {
   if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
 }
 
-function tickLive() {
-  const m = MATCHES.find(x => x.status === 'live');
-  if (!m) return;
-  const feed = document.getElementById('feed-' + m.id);
-  if (!feed) { stopLiveEngine(); return; }
+async function liveTick() {
+  const liveIds = () => MATCHES.filter(m => m.status === 'live').map(m => m.id).join(',');
+  const before = liveIds();
+  try { await refreshMatches(); } catch (e) { return; }
 
-  const elapsed = (Date.now() - liveStart) / 1000;
-  const shown = LIVE_TIMELINE.filter(e => e.at <= elapsed);
+  // If a game started or finished, the sections change — re-render the page.
+  if (liveIds() !== before) {
+    if (document.getElementById('feed-' + before.split(',')[0]) || document.querySelector('.match-card.live')) {
+      navigate('home');
+    }
+    return;
+  }
 
-  // current score = the last event that carried a score
-  let hs = 0, as = 0, minute = 0;
-  shown.forEach(e => {
-    if (e.minute) minute = e.minute;
-    if (e.score && e.type !== 'goal-var') { hs = e.score[0]; as = e.score[1]; }
-  });
+  // Otherwise update each live card's score, clock and event feed in place.
+  for (const m of MATCHES.filter(x => x.status === 'live')) {
+    const hsEl = document.getElementById('hs-' + m.id);
+    const asEl = document.getElementById('as-' + m.id);
+    const minEl = document.getElementById('min-' + m.id);
+    if (hsEl) hsEl.textContent = m.homeScore ?? 0;
+    if (asEl) asEl.textContent = m.awayScore ?? 0;
+    if (minEl) minEl.textContent = m.minute || 'LIVE';
 
-  const hsEl = document.getElementById('hs-' + m.id);
-  const asEl = document.getElementById('as-' + m.id);
-  const minEl = document.getElementById('min-' + m.id);
-  if (hsEl) hsEl.textContent = hs;
-  if (asEl) asEl.textContent = as;
-  if (minEl) minEl.textContent = minute ? `${minute}'` : 'LIVE';
-
-  // render event feed (newest first)
-  feed.innerHTML = shown.slice().reverse().map(e => eventRow(e, m)).join('');
+    const feed = document.getElementById('feed-' + m.id);
+    if (feed) feed.innerHTML = renderFeed(await espnFetchEvents(m.id));
+  }
 }
 
-function eventRow(e, m) {
-  const side = e.team === 'home' ? m.home : m.away;
-  let icon, label;
-  switch (e.type) {
-    case 'goal':     icon = '⚽'; label = `<b>Goal!</b> ${e.player}`; break;
-    case 'goal-var': icon = '🚫'; label = `${e.note || 'Goal disallowed (VAR)'} — ${e.player}`; break;
-    case 'yellow':   icon = '🟨'; label = `Yellow card — ${e.player}`; break;
-    case 'red':      icon = '🟥'; label = `Red card — ${e.player}`; break;
-    default:         icon = '•';  label = e.player || '';
-  }
-  const varCls = e.type === 'goal-var' ? ' var' : '';
-  return `<div class="event${varCls}">
-    <span class="ev-min">${e.minute}'</span>
+function renderFeed(events) {
+  if (!events.length) return `<div class="event"><span class="ev-text">No events yet.</span></div>`;
+  return events.slice(0, 20).map(feedRow).join('');
+}
+
+function feedRow(e) {
+  const t = (e.typeText || '').toLowerCase();
+  const txt = (e.text || '').toLowerCase();
+  let icon = '•';
+  if (t.includes('yellow')) icon = '🟨';
+  else if (t.includes('red')) icon = '🟥';
+  else if (t.includes('substitution')) icon = '🔄';
+  else if (txt.includes('disallow') || txt.includes('var')) icon = '🚫';
+  else if (t.includes('goal') || t.includes('penalty')) icon = txt.includes('miss') ? '❌' : '⚽';
+  const min = e.minute ? `${e.minute}` : '';
+  return `<div class="event">
+    <span class="ev-min">${min}</span>
     <span class="ev-icon">${icon}</span>
-    ${flagImg(side, 'flag-xs', 20)}
-    <span class="ev-text">${label}</span>
+    <span class="ev-text">${e.text || e.typeText}</span>
   </div>`;
 }
 

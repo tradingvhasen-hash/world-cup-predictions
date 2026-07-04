@@ -73,6 +73,7 @@ body{
   font-size:1.05rem; margin:22px 4px 12px; color:var(--green);
 }
 .muted{color:var(--muted); font-size:.9rem; margin:4px 4px 14px}
+.loading{color:var(--muted); text-align:center; padding:40px 0; font-size:.95rem}
 
 /* ---------- score strip ---------- */
 .score-strip{
