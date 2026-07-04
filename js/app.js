@@ -72,7 +72,7 @@ async function liveTick() {
 
   // If a game started or finished, the sections change — re-render the page.
   if (liveIds() !== before) {
-    if (document.querySelector('.mrow.live')) navigate('home');
+    if (document.querySelector('.grow.live') || document.querySelector('.home-page')) navigate('home');
     return;
   }
 
@@ -166,10 +166,10 @@ function fmtCountdown(ms) {
   if (ms <= 0) return 'kicking off';
   const s = Math.floor(ms / 1000);
   const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-  if (d > 0) return `in ${d}d ${h}h`;
-  if (h > 0) return `in ${h}h ${m}m`;
-  if (m > 0) return `in ${m}m ${sec}s`;
-  return `in ${sec}s`;
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${sec}s`;
+  return `${sec}s`;
 }
 
 /* ---------- boot ---------- */

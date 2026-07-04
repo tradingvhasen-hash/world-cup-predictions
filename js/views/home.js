@@ -1,12 +1,14 @@
 /* ============================================================================
-   HOME VIEW
-   - Live matches (only while a game is being played)
-   - "Next up": next 3 matches — tap a flag to add a goal, tap the dots to
-     remove one; auto-saves and locks at kick-off. Countdown shows as a small
-     pill on the card's top edge.
-   - "Later": further fixtures (not yet predictable)
-   - "Results": finished matches
-   Hints are shown as small "?" tooltips, not full lines.
+   HOME VIEW — one strict visual grammar for everything.
+   Each section is ONE grouped card (iOS inset-list style). Every match is one
+   row on a fixed 3-column grid:  [team] [centre] [team].
+   Only the centre changes:
+     live     → score + minute
+     predict  → tappable prediction numbers + countdown
+     coming   → countdown only (dimmed row)
+     result   → final score + FT (winner bold)
+   Predict: tap a team to add a goal, tap a number to remove one. Auto-saves,
+   locks at kick-off.
    ========================================================================== */
 
 function renderHome() {
@@ -32,98 +34,99 @@ function renderHome() {
   let html = `<div class="page home-page">`;
 
   if (live.length) {
-    html += sectionTitle(`<span class="live-dot"></span>Live`);
-    html += live.map(liveRow).join('');
+    html += glabel('Live', null, true);
+    html += `<div class="group">${live.map(liveRow).join('')}</div>`;
   }
 
-  html += sectionTitle('Next up', 'Tap a flag to add a goal, tap the dots under it to remove one. Predictions lock when the match kicks off.');
-  html += predictable.length ? predictable.map(predictRow).join('')
-                             : `<p class="muted">No matches open for prediction right now.</p>`;
+  html += glabel('Predict now', 'Tap a team to add a goal. Tap a number to remove one. Predictions lock at kick-off.');
+  html += predictable.length
+    ? `<div class="group">${predictable.map(predictRow).join('')}</div>`
+    : `<p class="muted">No matches open for prediction right now.</p>`;
 
   if (later.length) {
-    html += sectionTitle('Later', 'These open for prediction closer to kick-off. Check back then.');
-    html += later.map(laterRow).join('');
+    html += glabel('Coming up', 'These open for prediction closer to kick-off.');
+    html += `<div class="group">${later.map(laterRow).join('')}</div>`;
   }
 
   if (finished.length) {
-    html += sectionTitle('Results');
-    html += finished.map(resultRow).join('');
+    html += glabel('Results');
+    html += `<div class="group">${finished.map(resultRow).join('')}</div>`;
   }
 
   html += `</div>`;
   return html;
 }
 
-function sectionTitle(label, tipText) {
-  const tip = tipText ? ` <button class="tip" type="button">?<span class="tip-bubble">${tipText}</span></button>` : '';
-  return `<h2 class="section-title">${label}${tip}</h2>`;
+/* ---- section label (tiny caps, optional "?" tooltip) ---- */
+function glabel(text, tipText, liveDot) {
+  const tip = tipText ? `<button class="tip" type="button">?<span class="tip-bubble">${tipText}</span></button>` : '';
+  return `<h2 class="glabel">${liveDot ? '<span class="live-dot"></span>' : ''}${text}${tip}</h2>`;
 }
 
-/* ---- shared row halves ---- */
-function sideTeam(code, right) {
-  return `<div class="mrow-team${right ? ' right' : ''}">
-    ${right ? `<span>${teamName(code)}</span>${flagImg(code, 'flag')}`
-            : `${flagImg(code, 'flag')}<span>${teamName(code)}</span>`}
+/* ---- team cell (fixed grammar, both sides) ---- */
+function gteam(code, right, cls, nameCls) {
+  return `<div class="gteam${right ? ' right' : ''}${cls ? ' ' + cls : ''}">
+    ${right ? `<span class="${nameCls || ''}">${teamName(code)}</span>${flagImg(code, 'flag')}`
+            : `${flagImg(code, 'flag')}<span class="${nameCls || ''}">${teamName(code)}</span>`}
   </div>`;
 }
 
+/* ---- rows ---- */
 function liveRow(m) {
-  return `<div class="mrow live" id="live-${m.id}">
-      ${sideTeam(m.home, false)}
-      <div class="mrow-mid">
-        <div class="mrow-score"><span id="hs-${m.id}">${m.homeScore ?? 0}</span>–<span id="as-${m.id}">${m.awayScore ?? 0}</span></div>
-        <div class="live-min" id="min-${m.id}">${m.minute || 'LIVE'}</div>
+  return `<div class="grow live" id="live-${m.id}">
+      ${gteam(m.home, false)}
+      <div class="gmid">
+        <div class="gscore"><span id="hs-${m.id}">${m.homeScore ?? 0}</span>–<span id="as-${m.id}">${m.awayScore ?? 0}</span></div>
+        <div class="g-sub"><span class="min" id="min-${m.id}">${m.minute || 'LIVE'}</span></div>
       </div>
-      ${sideTeam(m.away, true)}
+      ${gteam(m.away, true)}
     </div>
     <div class="event-feed" id="feed-${m.id}"></div>`;
 }
 
 function resultRow(m) {
-  return `<div class="mrow">
-    ${sideTeam(m.home, false)}
-    <div class="mrow-mid"><div class="mrow-score">${m.homeScore}–${m.awayScore}</div></div>
-    ${sideTeam(m.away, true)}
+  const hWin = m.homeScore > m.awayScore, aWin = m.awayScore > m.homeScore;
+  return `<div class="grow">
+    ${gteam(m.home, false, '', hWin ? 'res-win' : aWin ? 'res-lose' : '')}
+    <div class="gmid">
+      <div class="gscore">${m.homeScore}–${m.awayScore}</div>
+      <div class="g-sub">FT</div>
+    </div>
+    ${gteam(m.away, true, '', aWin ? 'res-win' : hWin ? 'res-lose' : '')}
   </div>`;
 }
 
 function laterRow(m) {
-  return `<div class="mrow later">
-    <div class="cd-pill" data-kickoff="${m.kickoff}"></div>
-    ${sideTeam(m.home, false)}
-    <div class="mrow-mid"><div class="later-lock">🔒</div></div>
-    ${sideTeam(m.away, true)}
+  return `<div class="grow later">
+    ${gteam(m.home, false)}
+    <div class="gmid">
+      <div class="g-cd cd" data-kickoff="${m.kickoff}"></div>
+    </div>
+    ${gteam(m.away, true)}
   </div>`;
 }
 
-/* ---- upcoming: tap-a-flag prediction ---- */
 function predictRow(m) {
   const p = getPrediction(m.id);
   const hv = p ? p.home : 0;
   const av = p ? p.away : 0;
-  return `<div class="mrow predict" data-match="${m.id}">
-    <div class="cd-pill" data-kickoff="${m.kickoff}"></div>
-    ${tapTeam(m.id, m.home, 'h', hv, false)}
-    <div class="mrow-mid">
-      <div class="tap-score"><span id="ph-${m.id}">${hv}</span> – <span id="pa-${m.id}">${av}</span></div>
-      <span class="save-flash" id="sf-${m.id}">✓ saved</span>
+  return `<div class="grow predict" data-match="${m.id}">
+    <button class="gteam tap" id="flag-h-${m.id}" type="button" aria-label="Add goal for ${teamName(m.home)}">
+      ${flagImg(m.home, 'flag')}<span>${teamName(m.home)}</span>
+    </button>
+    <div class="gmid">
+      <div class="gscore pred">
+        <button class="gnum" id="ph-${m.id}" type="button" aria-label="Remove a goal">${hv}</button><span class="gdash">–</span><button class="gnum" id="pa-${m.id}" type="button" aria-label="Remove a goal">${av}</button>
+      </div>
+      <div class="g-sub">
+        <span class="cd" data-kickoff="${m.kickoff}"></span>
+        <span class="save-flash" id="sf-${m.id}">✓ saved</span>
+      </div>
     </div>
-    ${tapTeam(m.id, m.away, 'a', av, true)}
+    <button class="gteam right tap" id="flag-a-${m.id}" type="button" aria-label="Add goal for ${teamName(m.away)}">
+      <span>${teamName(m.away)}</span>${flagImg(m.away, 'flag')}
+    </button>
   </div>`;
-}
-
-function tapTeam(id, code, side, val, right) {
-  const flag = `<button class="tapflag" id="flag-${side}-${id}" type="button" aria-label="Add goal for ${teamName(code)}">${flagImg(code, 'flag')}</button>`;
-  const name = `<span class="team-name">${teamName(code)}</span>`;
-  const pips = `<button class="pips" id="pips-${side}-${id}" type="button" aria-label="Remove a goal">${pipsHtml(val)}</button>`;
-  return `<div class="tapteam${right ? ' right' : ''}">${flag}${name}${pips}</div>`;
-}
-
-function pipsHtml(n) {
-  if (!n) return '';
-  let s = '';
-  for (let i = 0; i < n; i++) s += `<span class="pip${i === n - 1 ? ' pop' : ''}"></span>`;
-  return s;
 }
 
 /* ---- wire up ---- */
@@ -137,12 +140,12 @@ function bindHome() {
     return;
   }
 
-  document.querySelectorAll('.mrow.predict').forEach(row => {
+  document.querySelectorAll('.grow.predict').forEach(row => {
     const id = row.getAttribute('data-match');
     document.getElementById('flag-h-' + id).addEventListener('click', () => bumpGoal(id, 'h', 1));
     document.getElementById('flag-a-' + id).addEventListener('click', () => bumpGoal(id, 'a', 1));
-    document.getElementById('pips-h-' + id).addEventListener('click', () => bumpGoal(id, 'h', -1));
-    document.getElementById('pips-a-' + id).addEventListener('click', () => bumpGoal(id, 'a', -1));
+    document.getElementById('ph-' + id).addEventListener('click', () => bumpGoal(id, 'h', -1));
+    document.getElementById('pa-' + id).addEventListener('click', () => bumpGoal(id, 'a', -1));
   });
 
   updateScoreStrip();
@@ -151,10 +154,12 @@ function bindHome() {
 }
 
 function bumpGoal(id, side, delta) {
-  const span = document.getElementById((side === 'h' ? 'ph-' : 'pa-') + id);
-  const v = Math.max(0, Math.min(20, parseInt(span.textContent || '0', 10) + delta));
-  span.textContent = v;
-  document.getElementById('pips-' + side + '-' + id).innerHTML = pipsHtml(v);
+  const el = document.getElementById((side === 'h' ? 'ph-' : 'pa-') + id);
+  const v = Math.max(0, Math.min(20, parseInt(el.textContent || '0', 10) + delta));
+  el.textContent = v;
+  el.classList.remove('bump');
+  void el.offsetWidth;              // restart the pop animation
+  el.classList.add('bump');
   autoSaveTap(id);
 }
 
@@ -174,5 +179,5 @@ function flashSaved(id) {
   if (!el) return;
   el.classList.add('show');
   clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove('show'), 1400);
+  el._t = setTimeout(() => el.classList.remove('show'), 1200);
 }

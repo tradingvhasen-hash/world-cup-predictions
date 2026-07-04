@@ -310,34 +310,69 @@ body{
 .step-val{min-width:26px; font-size:1.3rem}
 .step-val{min-width:30px; text-align:center; font-size:1.5rem; font-weight:800; color:var(--green)}
 
-/* ---------- uniform match rows (live / upcoming / finished) ---------- */
-.mrow{
-  display:flex; align-items:center; gap:8px;
-  background:var(--card); border:1px solid var(--line); border-radius:14px;
-  padding:12px 14px; margin-bottom:8px; box-shadow:var(--shadow);
+/* ============================================================
+   ONE VISUAL GRAMMAR — grouped cards + identical match rows
+   ============================================================ */
+.glabel{
+  display:flex; align-items:center; gap:7px;
+  margin:24px 10px 8px; font-size:.68rem; font-weight:700;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--muted);
 }
-.mrow.live{border-color:#f3c7c7}
-.mrow-team{flex:1; min-width:0; display:flex; align-items:center; gap:8px;
-  font-size:.84rem; font-weight:600}
-.mrow-team span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.mrow-team.right{justify-content:flex-end; text-align:right}
-.mrow-team .flag{width:30px; height:30px; border-radius:8px}
-.mrow-team .flag-fallback.flag{width:30px; height:30px}
-.mrow-mid{display:flex; flex-direction:column; align-items:center; gap:3px; min-width:100px}
-.mrow-score{font-size:1.15rem; font-weight:800; color:var(--green)}
-.mrow-time{font-size:.66rem; color:var(--muted)}
-.mrow-time.saved{color:var(--good); font-weight:700}
-.mrow-time.err{color:var(--bad); font-weight:700}
-.live-min{font-size:.66rem; color:var(--live); font-weight:700}
-.sc-inputs{display:flex; align-items:center; gap:6px}
-.sc-in{
-  width:38px; height:40px; text-align:center; font-size:1.15rem; font-weight:800;
-  border:1.5px solid var(--line); border-radius:10px; background:#fbfcfb; color:var(--green);
-  -moz-appearance:textfield;
+.group{
+  background:var(--card); border:1px solid var(--line); border-radius:18px;
+  box-shadow:var(--shadow); overflow:hidden;
 }
-.sc-in::-webkit-outer-spin-button,.sc-in::-webkit-inner-spin-button{-webkit-appearance:none; margin:0}
-.sc-in:focus{outline:none; border-color:var(--green-2)}
-.sc-sep{color:var(--muted); font-weight:700}
+/* every match = one row on the same 3-column grid */
+.grow{
+  display:grid; grid-template-columns:1fr 86px 1fr; align-items:center; gap:6px;
+  padding:14px;
+}
+.grow + .grow, .event-feed + .grow{border-top:1px solid var(--line)}
+.gteam{
+  display:flex; align-items:center; gap:9px; min-width:0;
+  font-size:.85rem; font-weight:600; color:var(--ink);
+  border:none; background:none; padding:0; text-align:left;
+}
+.gteam span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.gteam.right{justify-content:flex-end; text-align:right}
+.gteam .flag{width:30px; height:30px; border-radius:9px; flex:none;
+  box-shadow:0 1px 3px rgba(0,0,0,.10)}
+.gteam .flag-fallback.flag{width:30px; height:30px; flex:none}
+button.gteam{cursor:pointer; -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation; -webkit-user-select:none; user-select:none; font-family:inherit}
+button.gteam .flag{transition:transform .12s ease; pointer-events:none}
+button.gteam:active .flag{transform:scale(.86)}
+.gmid{display:flex; flex-direction:column; align-items:center; gap:2px; min-width:0}
+.gscore{font-size:1.05rem; font-weight:800; color:var(--ink);
+  font-variant-numeric:tabular-nums; letter-spacing:.02em}
+.gscore.pred{color:var(--green); display:flex; align-items:center}
+.gnum{
+  border:none; background:none; padding:2px 7px; cursor:pointer; font-family:inherit;
+  font-size:1.2rem; font-weight:800; color:var(--green);
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+}
+.gnum.bump{animation:numpop .25s ease}
+@keyframes numpop{0%{transform:scale(1)} 50%{transform:scale(1.45)} 100%{transform:scale(1)}}
+.gdash{color:var(--muted); font-weight:700}
+.g-sub{
+  position:relative; min-height:13px; display:flex; align-items:center; justify-content:center;
+  font-size:.63rem; font-weight:600; color:var(--muted); letter-spacing:.03em;
+}
+.g-sub .min{color:var(--live); font-weight:700}
+.g-cd{font-size:.78rem; font-weight:700; color:var(--muted)}
+.save-flash{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  background:var(--card); color:var(--good); font-weight:700; white-space:nowrap;
+  opacity:0; transition:opacity .25s; pointer-events:none;
+}
+.save-flash.show{opacity:1}
+/* dimmed, not-yet-open fixtures */
+.grow.later .gteam{opacity:.45}
+/* results: winner bold, loser quiet */
+.res-win{font-weight:800}
+.res-lose{color:var(--muted); font-weight:500}
+/* live feed sits inside the group, under its row */
+.group .event-feed{margin:0; padding:2px 14px 10px; border-top:1px dashed var(--line)}
 
 /* ---------- "?" tooltip ---------- */
 .tip{
@@ -354,44 +389,9 @@ body{
 }
 .tip.open .tip-bubble{opacity:1; transform:translateY(0)}
 
-/* ---------- tap-a-flag prediction ---------- */
-.mrow.predict, .mrow.later{position:relative; margin-top:16px; align-items:flex-start}
-.mrow.predict{padding:16px 12px 14px}
-.cd-pill{
-  position:absolute; top:-10px; left:50%; transform:translateX(-50%);
-  background:var(--green); color:#fff; font-weight:700; font-size:.62rem;
-  padding:3px 12px; border-radius:20px; box-shadow:0 2px 6px rgba(0,0,0,.18); white-space:nowrap;
-}
-.tapteam{flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:5px}
-.tapflag, .pips{
-  border:none; background:none; padding:0; cursor:pointer;
-  -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
-  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
-}
-.tapflag{border-radius:12px}
-.tapflag .flag{width:44px; height:44px; border-radius:12px; transition:transform .1s ease; pointer-events:none; display:block}
-.tapflag .flag-fallback.flag{width:44px; height:44px; pointer-events:none}
-.tapflag:active .flag{transform:scale(.9)}
-.team-name{font-size:.8rem; text-align:center; max-width:100%;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.pips{display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:4px;
-  min-height:12px; max-width:96px}
-.pip{width:8px; height:8px; border-radius:50%; background:var(--gold); pointer-events:none;
-  box-shadow:0 1px 2px rgba(0,0,0,.15)}
-.pip.pop{animation:pippop .3s ease}
-@keyframes pippop{0%{transform:scale(0)} 60%{transform:scale(1.4)} 100%{transform:scale(1)}}
-.mrow.predict .mrow-mid{min-width:70px; padding-top:12px; position:relative}
-.tap-score{font-size:1.25rem; font-weight:800; color:var(--green)}
-.save-flash{
-  position:absolute; bottom:-15px; left:50%; transform:translateX(-50%);
-  font-size:.64rem; font-weight:700; color:var(--good); white-space:nowrap;
-  opacity:0; transition:opacity .25s; pointer-events:none;
-}
-.save-flash.show{opacity:1}
-
-/* "Later" fixtures */
-.mrow.later .mrow-mid{padding-top:10px}
-.later-lock{font-size:1rem; opacity:.5}
+/* tooltip bubble centred under its "?" */
+.tip .tip-bubble{left:50%; transform:translateX(-50%) translateY(-4px)}
+.tip.open .tip-bubble{transform:translateX(-50%) translateY(0)}
 
 /* menu points chip */
 .menu-points{
