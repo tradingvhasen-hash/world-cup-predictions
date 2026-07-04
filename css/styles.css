@@ -105,8 +105,9 @@ body{
 .match-meta{font-size:.78rem; color:var(--muted); margin-bottom:10px}
 .match-row{display:flex; align-items:center; justify-content:space-between; gap:8px}
 .team{display:flex; flex-direction:column; align-items:center; gap:6px; width:88px}
-.flag{width:44px; height:auto; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,.12)}
-.team-name{font-size:.8rem; font-weight:600; text-align:center}
+.flag{width:46px; height:46px; object-fit:cover; border-radius:12px;
+  box-shadow:0 1px 4px rgba(0,0,0,.10)}
+.team-name{font-size:.82rem; font-weight:600; text-align:center}
 
 /* flag fallback badge (shown only if the flag image fails to load) */
 .flag-fallback{
@@ -114,8 +115,8 @@ body{
   background:var(--green-2); color:#fff; font-weight:800; border-radius:4px;
   font-size:.7rem; letter-spacing:.5px;
 }
-.flag-fallback.flag{width:52px; height:34px}
-.flag-fallback.flag-sm{width:26px; height:18px; font-size:.6rem}
+.flag-fallback.flag{width:46px; height:46px; border-radius:12px}
+.flag-fallback.flag-sm{width:26px; height:26px; border-radius:7px; font-size:.6rem}
 .flag-fallback.flag-xs{width:18px; height:12px; font-size:.5rem}
 
 .score-live,.score-final{
@@ -294,16 +295,17 @@ body{
 .vs{color:var(--muted); font-weight:700; font-size:.9rem}
 
 /* ---------- prediction stepper ---------- */
-.predict-row{display:flex; align-items:center; justify-content:center; gap:14px; margin-top:14px}
-.stepper{display:flex; align-items:center; gap:8px}
+.predict-row{display:flex; align-items:center; justify-content:center; gap:10px; margin-top:12px}
+.stepper{display:flex; align-items:center; gap:6px}
 /* Tactile neumorphic stepper buttons (soft, press-in) — Uiverse ke1221 vibe */
 .step-btn{
-  width:42px; height:42px; border:none; background:#eef1ef;
-  border-radius:12px; font-size:1.35rem; font-weight:700; color:var(--green);
+  width:36px; height:36px; border:none; background:#eef1ef;
+  border-radius:10px; font-size:1.2rem; font-weight:700; color:var(--green);
   cursor:pointer; line-height:1; display:flex; align-items:center; justify-content:center;
-  box-shadow:4px 4px 8px #dadedc, -4px -4px 8px #ffffff; transition:box-shadow .15s;
+  box-shadow:3px 3px 6px #dadedc, -3px -3px 6px #ffffff; transition:box-shadow .15s;
 }
-.step-btn:active{box-shadow:inset 3px 3px 7px #dadedc, inset -3px -3px 7px #ffffff}
+.step-btn:active{box-shadow:inset 2px 2px 5px #dadedc, inset -2px -2px 5px #ffffff}
+.step-val{min-width:26px; font-size:1.3rem}
 .step-val{min-width:30px; text-align:center; font-size:1.5rem; font-weight:800; color:var(--green)}
 
 /* ---------- countdown (inline, subtle) ---------- */
