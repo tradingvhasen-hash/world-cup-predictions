@@ -150,13 +150,13 @@ function updateCountdowns() {
   els.forEach(el => { el.textContent = fmtCountdown(new Date(el.getAttribute('data-kickoff')).getTime() - now); });
 }
 function fmtCountdown(ms) {
-  if (ms <= 0) return '⚽ Kicking off';
+  if (ms <= 0) return 'kicking off';
   const s = Math.floor(ms / 1000);
   const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-  if (d > 0) return `⏳ Starts in ${d}d ${h}h`;
-  if (h > 0) return `⏳ Starts in ${h}h ${m}m`;
-  if (m > 0) return `⏳ Starts in ${m}m ${sec}s`;
-  return `⏳ Starts in ${sec}s`;
+  if (d > 0) return `in ${d}d ${h}h`;
+  if (h > 0) return `in ${h}h ${m}m`;
+  if (m > 0) return `in ${m}m ${sec}s`;
+  return `in ${sec}s`;
 }
 
 /* ---------- boot ---------- */

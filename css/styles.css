@@ -105,8 +105,8 @@ body{
 .match-meta{font-size:.78rem; color:var(--muted); margin-bottom:10px}
 .match-row{display:flex; align-items:center; justify-content:space-between; gap:8px}
 .team{display:flex; flex-direction:column; align-items:center; gap:6px; width:88px}
-.flag{width:52px; height:auto; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,.15)}
-.team-name{font-size:.82rem; font-weight:600; text-align:center}
+.flag{width:44px; height:auto; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.team-name{font-size:.8rem; font-weight:600; text-align:center}
 
 /* flag fallback badge (shown only if the flag image fails to load) */
 .flag-fallback{
@@ -306,9 +306,20 @@ body{
 .step-btn:active{box-shadow:inset 3px 3px 7px #dadedc, inset -3px -3px 7px #ffffff}
 .step-val{min-width:30px; text-align:center; font-size:1.5rem; font-weight:800; color:var(--green)}
 
-/* ---------- countdown ---------- */
-.countdown{text-align:center; font-size:.82rem; color:var(--green-2); font-weight:700;
-  margin:2px 0 8px; background:#eef7f2; border-radius:8px; padding:5px}
+/* ---------- countdown (inline, subtle) ---------- */
+.cd{color:var(--muted); font-weight:600}
+
+/* ---------- compact results list ---------- */
+.results-list{display:flex; flex-direction:column; gap:8px}
+.result-row{
+  display:flex; align-items:center; gap:10px;
+  background:var(--card); border:1px solid var(--line); border-radius:14px;
+  padding:10px 14px; box-shadow:var(--shadow);
+}
+.rr-team{display:flex; align-items:center; gap:8px; flex:1; font-size:.85rem; font-weight:600}
+.rr-team.rr-away{justify-content:flex-end; text-align:right}
+.rr-team .flag-sm{width:26px}
+.rr-score{min-width:56px; text-align:center; font-weight:800; font-size:1.05rem; color:var(--green)}
 
 /* ---------- live feed: team accents + collapse ---------- */
 .event{border-left:3px solid transparent; padding-left:8px}

@@ -67,7 +67,7 @@ function scoreRow({ m, pred, res }) {
       <div class="row-scorebox"><span class="lbl">Your pick</span><span class="val">${pred.home} – ${pred.away}</span></div>
       ${actual}
     </div>
-    <div class="row-meta">${m.stage} · ${fmtDate(m.kickoff)}</div>
+    <div class="row-meta">${fmtDate(m.kickoff)}</div>
     ${badge}
   </div>`;
 }
