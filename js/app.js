@@ -34,8 +34,8 @@ function navigate(name) {
 }
 
 function updateScoreStrip() {
-  const el = document.querySelector('.score-strip-value');
-  if (el) el.textContent = totalScore() + ' pts';
+  const el = document.getElementById('menu-points');
+  if (el) el.textContent = `⭐ ${totalScore()} pts`;
 }
 
 /* ---------- hamburger menu ---------- */
@@ -137,6 +137,7 @@ function toggleFeed(id) {
 
 /* ---------- countdown to kickoff (upcoming cards) ---------- */
 let countdownTimer = null;
+let cdRefreshing = false;
 function startCountdowns() {
   stopCountdowns();
   updateCountdowns();
@@ -147,7 +148,19 @@ function updateCountdowns() {
   const els = document.querySelectorAll('[data-kickoff]');
   if (!els.length) { stopCountdowns(); return; }
   const now = Date.now();
-  els.forEach(el => { el.textContent = fmtCountdown(new Date(el.getAttribute('data-kickoff')).getTime() - now); });
+  let kickedOff = false;
+  els.forEach(el => {
+    const diff = new Date(el.getAttribute('data-kickoff')).getTime() - now;
+    if (diff <= 0) { el.textContent = 'kicking off…'; kickedOff = true; }
+    else el.textContent = fmtCountdown(diff);
+  });
+  // A match just started: pull fresh data so it moves to Live and locks
+  // (prediction ends the moment the game starts).
+  if (kickedOff && !cdRefreshing) {
+    cdRefreshing = true;
+    refreshMatches().then(() => { cdRefreshing = false; navigate('home'); })
+                    .catch(() => { cdRefreshing = false; });
+  }
 }
 function fmtCountdown(ms) {
   if (ms <= 0) return 'kicking off';
