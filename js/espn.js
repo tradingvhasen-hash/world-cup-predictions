@@ -82,19 +82,66 @@ function hasRealTeams(m) {
   return !!(h && h.logo && a && a.logo);
 }
 
-/* Per-match live events (goals, cards, subs...) newest-first, capped. */
+/* Low-value event types we hide from the feed (keep goals/cards/subs/VAR). */
+function isNoiseEvent(e) {
+  const t = (e.typeText || '').toLowerCase();
+  const x = (e.text || '').toLowerCase();
+  return t.includes('delay') || x.includes('delay') || x.includes('drinks break') ||
+         x.includes('first half begins') || x.includes('second half begins') ||
+         x.includes('first half ends') || x.includes('match ends') || x.includes('kickoff');
+}
+
+/* Per-match live events (goals, cards, subs, VAR) newest-first, noise removed. */
 async function espnFetchEvents(eventId) {
   try {
     const res = await fetch(`${ESPN_BASE}/summary?event=${eventId}`);
     if (!res.ok) return [];
     const j = await res.json();
+    const homeId = espnHomeTeamId(j);
     const ke = (j.keyEvents || []).map((e) => ({
       minute: (e.clock && e.clock.displayValue) || '',
       typeText: (e.type && e.type.text) || '',
       text: e.text || '',
-    }));
+      side: e.team ? (String(e.team.id) === homeId ? 'home' : 'away') : null,
+    })).filter((e) => !isNoiseEvent(e));
     return ke.reverse();  // newest first
   } catch (e) {
     return [];
+  }
+}
+
+function espnHomeTeamId(summary) {
+  const comps = summary.header && summary.header.competitions && summary.header.competitions[0];
+  const c = comps && comps.competitors && comps.competitors.find((x) => x.homeAway === 'home');
+  return c ? String(c.team.id) : '';
+}
+
+/* Starting lineups + subs for a match, split into home/away with formation. */
+async function espnFetchLineups(eventId) {
+  try {
+    const res = await fetch(`${ESPN_BASE}/summary?event=${eventId}`);
+    if (!res.ok) return null;
+    const j = await res.json();
+    const homeId = espnHomeTeamId(j);
+    const out = { home: null, away: null };
+    (j.rosters || []).forEach((r) => {
+      const side = String((r.team && r.team.id)) === homeId ? 'home' : 'away';
+      const players = (r.roster || []).map((p) => ({
+        name: (p.athlete && p.athlete.displayName) || '',
+        jersey: p.jersey || '',
+        pos: (p.position && p.position.abbreviation) || '',
+        starter: !!p.starter,
+      }));
+      out[side] = {
+        teamName: (r.team && r.team.displayName) || '',
+        code: r.team ? registerTeam(r.team) : '',
+        formation: r.formation || '',
+        starters: players.filter((p) => p.starter),
+        subs: players.filter((p) => !p.starter),
+      };
+    });
+    return (out.home && out.away) ? out : null;
+  } catch (e) {
+    return null;
   }
 }

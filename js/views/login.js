@@ -42,6 +42,8 @@ function showLogin() {
         <button type="submit" class="auth-submit" id="auth-submit">
           ${isSignup ? 'Create account' : 'Sign in'}
         </button>
+        <p class="auth-tip">Tip: signing in with Google is quicker and more
+          reliable — email sign-in can occasionally be delayed.</p>
       </form>
 
       ${isSignup ? '' : `<button class="auth-link" id="forgot-link">Forgot your password?</button>`}
