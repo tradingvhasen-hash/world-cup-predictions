@@ -3,18 +3,21 @@
    Palette: deep pitch green + gold, light neutral background.
    ========================================================================== */
 :root{
-  --green:#0b3d2e;      /* deep pitch green */
-  --green-2:#12664a;
-  --gold:#f2c14e;
-  --bg:#f4f6f5;
+  --green:#0a3b2c;      /* primary — deep pitch green */
+  --green-2:#0f5f45;    /* secondary green */
+  --green-tint:#eef4f1; /* subtle green wash for chips/tints */
+  --gold:#c99a3b;       /* refined, muted gold */
+  --gold-tint:#f6efdd;
+  --bg:#f5f6f6;         /* clean neutral background */
   --card:#ffffff;
-  --ink:#12211b;
-  --muted:#6b7d76;
-  --line:#e6ebe8;
-  --good:#1a8f5b;
-  --bad:#c94141;
-  --live:#e23b3b;
-  --shadow:0 2px 10px rgba(12,40,30,.06);
+  --ink:#13201b;
+  --muted:#79867f;
+  --line:#ececee;       /* soft hairline border */
+  --good:#1f8a5b;
+  --bad:#c65650;
+  --live:#dc463e;
+  --shadow:0 1px 2px rgba(16,40,30,.04), 0 8px 20px rgba(16,40,30,.05);
+  --radius:16px;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -178,9 +181,9 @@ body{
 .row-sub{font-size:.8rem; color:var(--ink); margin-top:2px}
 .badge{display:inline-block; margin-top:8px; padding:4px 10px; border-radius:20px;
   font-size:.75rem; font-weight:700}
-.badge.good{background:#e5f7ee; color:var(--good)}
-.badge.ok{background:#eef4ff; color:#2b6cb0}
-.badge.bad{background:#fdeaea; color:var(--bad)}
+.badge.good{background:var(--green-tint); color:var(--good)}
+.badge.ok{background:var(--gold-tint); color:#9a7524}
+.badge.bad{background:#f7ecec; color:var(--bad)}
 .badge.wait{background:#f0f2f1; color:var(--muted)}
 
 /* ---------- auth (login / sign-up) ---------- */
