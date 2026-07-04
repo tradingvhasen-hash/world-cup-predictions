@@ -16,6 +16,7 @@ function fmtDate(iso) {
 /* ---------- routing ---------- */
 const VIEWS = {
   home:    { render: renderHome,    after: bindHome,     title: 'Home' },
+  results: { render: renderResults, after: bindResults,  title: 'Results' },
   lineups: { render: renderLineups, after: bindLineups,  title: 'Lineups' },
   bracket: { render: renderBracket, after: null,         title: 'Bracket' },
   score:   { render: renderScore,   after: null,         title: 'My Score' },
@@ -35,7 +36,7 @@ function navigate(name) {
 
 function updateScoreStrip() {
   const el = document.getElementById('menu-points');
-  if (el) el.textContent = `⭐ ${totalScore()} pts`;
+  if (el) el.textContent = `${totalScore()} pts`;
 }
 
 /* ---------- hamburger menu ---------- */
