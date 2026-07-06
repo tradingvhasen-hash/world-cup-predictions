@@ -29,13 +29,14 @@ function registerTeam(t) {
 
 function teamName(code) { return TEAMS[code] ? TEAMS[code].name : 'TBD'; }
 
-/* Flag/crest <img> with a graceful fallback badge (the team code) if the image
-   is missing or fails to load. `w` is accepted for backwards compatibility. */
+/* Flag <img> in a clipping wrapper: ESPN country images are square with baked
+   white bands above/below the flag, so we scale the image up inside a round
+   mask to crop them away. Falls back to a small code badge if it fails. */
 function flagImg(code, cls, w) {
   const t = TEAMS[code];
   if (t && t.logo) {
-    return `<img class="${cls}" src="${t.logo}" alt="${t.name} flag" loading="lazy"
-        onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex'">` +
+    return `<span class="fwrap ${cls}"><img class="fimg" src="${t.logo}" alt="${t.name}" loading="lazy"
+        onerror="this.parentElement.style.display='none';this.parentElement.nextElementSibling.style.display='inline-flex'"></span>` +
       `<span class="flag-fallback ${cls}" style="display:none">${code.slice(0, 3)}</span>`;
   }
   return `<span class="flag-fallback ${cls}">${code.slice(0, 3)}</span>`;
