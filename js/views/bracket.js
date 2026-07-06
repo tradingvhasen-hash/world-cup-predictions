@@ -1,18 +1,24 @@
 /* ============================================================================
-   BRACKET — the core of the site.
-   Real knockout tree (R32 → Final) built from ESPN data, mirrored halves with
-   the trophy in the centre, Apple-quiet styling.
-   · Live view: real state — winners advance, losers fade, empty = future.
-   · "Make my bracket": pick winners of every undecided match, then save ONCE.
-     A saved bracket is permanent (no update path exists, even in the DB).
-   · Score: weighted points per correct pick (R16 1 · QF 2 · SF 4 · Final 8).
+   BRACKET — one round per screen, Apple-quiet.
+   Segmented control (R32 · R16 · QF · SF · Final) → that round's matches as
+   clean rows. Winners bold, losers fade. In edit mode you tap the team you
+   think wins — a green ring marks it IN PLACE (no re-render, no blink) — and
+   your winners flow into the next round. Save once; saved forever.
+   Scoring: R16 1 · QF 2 · SF 4 · Final 8 per correct pick.
    ========================================================================== */
 
 let BR = null;             // { r32,r16,qf,sf,f, byId, feeders }
+let brRound = null;        // 'r32'|'r16'|'qf'|'sf'|'f'
 let brView = 'live';       // 'live' | 'picks'
 let brEditing = false;
-let brDraft = {};          // eventId -> picked team code (before saving)
+let brDraft = {};
 let brError = false;
+
+const BR_ROUNDS = [
+  { key: 'r32', label: 'R32' }, { key: 'r16', label: 'R16' },
+  { key: 'qf', label: 'QF' }, { key: 'sf', label: 'SF' }, { key: 'f', label: 'Final' },
+];
+const BR_W = { r16: 1, qf: 2, sf: 4, f: 8 };
 
 /* ---------- data ---------- */
 async function loadBracketData() {
@@ -20,7 +26,7 @@ async function loadBracketData() {
   if (evs.length < 32) throw new Error('incomplete');
   const r32 = evs.slice(0, 16), r16 = evs.slice(16, 24),
         qf = evs.slice(24, 28), sf = evs.slice(28, 30),
-        f = evs[evs.length - 1];                       // last = Final (31 = 3rd place excluded)
+        f = evs[evs.length - 1];
   const byId = {};
   [...r32, ...r16, ...qf, ...sf, f].forEach(m => byId[m.id] = m);
   const feeders = {};
@@ -29,6 +35,7 @@ async function loadBracketData() {
   wireRound(sf, qf, /Quarterfinal (\d+)/i, feeders);
   wireRound([f], sf, /Semifinal (\d+)/i, feeders);
   BR = { r32, r16, qf, sf, f, byId, feeders };
+  if (!brRound) brRound = defaultRound();
 }
 
 function wireRound(round, prev, rx, feeders) {
@@ -58,35 +65,35 @@ function brWinner(m) {
   return null;
 }
 
+function roundMatches(key) { return key === 'f' ? [BR.f] : BR[key]; }
 function brRoundOf(m) {
   return BR.r16.includes(m) ? 'r16' : BR.qf.includes(m) ? 'qf'
        : BR.sf.includes(m) ? 'sf' : m === BR.f ? 'f' : 'r32';
 }
-const BR_W = { r16: 1, qf: 2, sf: 4, f: 8 };
-
-/* matches the user must pick = every knockout match not yet decided */
+function defaultRound() {
+  for (const r of BR_ROUNDS) if (roundMatches(r.key).some(m => m.state !== 'post')) return r.key;
+  return 'f';
+}
 function pickableMatches() {
   return [...BR.r16, ...BR.qf, ...BR.sf, BR.f].filter(m => m.state === 'pre');
 }
 function activePicks() { return brEditing ? brDraft : (userBracket ? userBracket.picks : {}); }
 
-/* who occupies one side of a match, for the current view */
 function slotInfo(m, side, usePicks) {
   const real = side === 'home' ? m.homeReal : m.awayReal;
-  if (real) return { code: side === 'home' ? m.home : m.away, from: null };
+  if (real) return { code: side === 'home' ? m.home : m.away };
   const fid = (BR.feeders[m.id] || [])[side === 'home' ? 0 : 1];
-  if (!fid) return { code: null, from: null };
+  if (!fid) return { code: null };
   const w = brWinner(BR.byId[fid]);
   if (usePicks) {
     const p = activePicks()[fid];
-    if (p) return { code: p, from: fid, picked: true, real: w };
-    if (w) return { code: w, from: fid };
-    return { code: null, from: fid };
+    if (p) return { code: p, picked: true, real: w };
+    if (w) return { code: w };
+    return { code: null };
   }
-  return w ? { code: w, from: fid } : { code: null, from: fid };
+  return w ? { code: w } : { code: null };
 }
 
-/* ---------- scoring ---------- */
 function bracketScore() {
   if (!BR || !userBracket) return null;
   let got = 0, max = 0, decided = 0, total = 0;
@@ -113,15 +120,8 @@ function renderBracket() {
   let head = '';
 
   if (brEditing) {
-    const need = pickableMatches();
-    const done = need.filter(m => brDraft[m.id]).length;
     head = `<div class="br-bar">
-      <div class="br-progress">${done} of ${need.length} picks</div>
-      <div class="br-actions">
-        <button class="br-btn ghost" id="br-cancel">Cancel</button>
-        <button class="br-btn solid" id="br-save" ${done === need.length ? '' : 'disabled'}>Save — final</button>
-      </div>
-      <p class="br-note">Tap the team you think wins each match. Saving is permanent.</p>
+      <p class="br-note">Tap the team you think wins each match, round by round.<br>Saving is permanent — one bracket, forever.</p>
     </div>`;
   } else if (userBracket) {
     const s = bracketScore();
@@ -136,77 +136,102 @@ function renderBracket() {
   } else {
     head = `<div class="br-bar">
       <button class="br-btn solid wide" id="br-make">Make my bracket</button>
-      <p class="br-note">Pick every winner through to the trophy. One shot — once saved it can't be changed.</p>
+      <p class="br-note">Pick every winner through to the trophy — one shot, no edits.</p>
     </div>`;
   }
 
-  return `<div class="page br-page">
-    <h1 class="page-title">Bracket</h1>
-    ${head}
-    ${bracketTree(usePicks)}
-  </div>`;
-}
+  const segs = BR_ROUNDS.map(r =>
+    `<button class="seg-btn ${brRound === r.key ? 'on' : ''}" data-round="${r.key}">${r.label}</button>`).join('');
 
-function bracketTree(usePicks) {
-  // halves from the semi-finals down
-  const sf1 = BR.sf[0], sf2 = BR.sf[1];
-  const qfL = (BR.feeders[sf1.id] || []).map(id => BR.byId[id]).filter(Boolean);
-  const qfR = (BR.feeders[sf2.id] || []).map(id => BR.byId[id]).filter(Boolean);
-  const r16Of = qfs => qfs.flatMap(q => (BR.feeders[q.id] || [])).map(id => BR.byId[id]).filter(Boolean);
-  const r16L = r16Of(qfL), r16R = r16Of(qfR);
-  const r32Of = r16s => r16s.flatMap(r => (BR.feeders[r.id] || [])).map(id => BR.byId[id]).filter(Boolean);
-  const r32L = r32Of(r16L), r32R = r32Of(r16R);
-
-  const col = (ms, side) => `<div class="bcol">${ms.map(m => pairHtml(m, side, usePicks)).join('')}</div>`;
-
-  // centre: finalists + trophy + champion
-  const fh = slotInfo(BR.f, 'home', usePicks);
-  const fa = slotInfo(BR.f, 'away', usePicks);
-  const champWin = usePicks ? (activePicks()[BR.f.id] || brWinner(BR.f)) : brWinner(BR.f);
-  const centre = `<div class="bcol centre">
-    ${slotBtn(BR.f, 'home', fh, usePicks)}
-    <div class="champ-wrap">
-      <svg class="trophy" viewBox="0 0 24 24"><path d="M6 3h12v2h3v3c0 2.8-2.2 5-5 5h-.4A6 6 0 0 1 13 15.9V18h3v2H8v-2h3v-2.1A6 6 0 0 1 8.4 13H8c-2.8 0-5-2.2-5-5V5h3V3zm-1 4v1c0 1.7 1.3 3 3 3V7H5zm14 0h-3v4c1.7 0 3-1.3 3-3V7z" fill="#C7A24A"/></svg>
-      <div class="champ ${champWin ? '' : 'empty'}">${champWin ? flagImg(champWin, 'bflag') : ''}</div>
+  return `<div class="page br-page ${brEditing ? 'editing' : ''}">
+    <div class="br-title-row">
+      <h1 class="page-title">Bracket</h1>
+      ${brEditing ? `<button class="br-cancel" id="br-cancel">Cancel</button>` : ''}
     </div>
-    ${slotBtn(BR.f, 'away', fa, usePicks)}
-  </div>`;
-
-  return `<div class="br-wrap"><div class="bracket">
-    ${col(r32L, 'l')}${col(r16L, 'l')}${col(qfL, 'l')}${col([sf1], 'l')}
-    ${centre}
-    ${col([sf2], 'r')}${col(qfR, 'r')}${col(r16R, 'r')}${col(r32R, 'r')}
-  </div></div>`;
-}
-
-function pairHtml(m, side, usePicks) {
-  return `<div class="bpair ${side}">
-    ${slotBtn(m, 'home', slotInfo(m, 'home', usePicks), usePicks)}
-    ${slotBtn(m, 'away', slotInfo(m, 'away', usePicks), usePicks)}
+    ${head}
+    <div class="seg rseg">${segs}</div>
+    <div id="br-body">${roundHtml(brRound, usePicks)}</div>
+    ${brEditing ? editFooter() : ''}
   </div>`;
 }
 
-function slotBtn(m, side, info, usePicks) {
-  const cls = ['bslot'];
-  let attrs = 'disabled';
-  if (!info.code) cls.push('empty');
-  else {
-    const win = brWinner(m);
-    if (win && !usePicks && win !== info.code) cls.push('lost');   // real loser fades
-    if (brEditing && m.state === 'pre') {
-      attrs = `data-pick="${m.id}" data-code="${info.code}"`;
-      if (brDraft[m.id] === info.code) cls.push('sel');
-    } else if (info.picked && info.real) {
-      cls.push(info.real === info.code ? 'correct' : 'wrong');     // scored pick
-    } else if (info.picked) {
-      cls.push('pickmark');                                        // pending pick
-    }
+function editFooter() {
+  const need = pickableMatches();
+  const done = need.filter(m => brDraft[m.id]).length;
+  return `<div class="br-foot">
+    <span class="br-progress" id="br-progress">${done}/${need.length}</span>
+    <button class="br-btn solid" id="br-save" ${done === need.length ? '' : 'disabled'}>Save — final</button>
+  </div>`;
+}
+
+function roundHtml(rkey, usePicks) {
+  const ms = roundMatches(rkey);
+  let html = `<div class="group">${ms.map(m => matchRow(m, usePicks)).join('')}</div>`;
+  if (rkey === 'f') html += champCard(usePicks);
+  return html;
+}
+
+function matchRow(m, usePicks) {
+  const h = slotInfo(m, 'home', usePicks);
+  const a = slotInfo(m, 'away', usePicks);
+  const pickable = brEditing && m.state === 'pre';
+  const pick = activePicks()[m.id];
+  const win = brWinner(m);
+
+  const mid = m.state === 'post'
+    ? `<div class="gscore">${m.homeScore}–${m.awayScore}</div><div class="g-sub">FT</div>`
+    : m.state === 'in'
+      ? `<div class="gscore">${m.homeScore}–${m.awayScore}</div><div class="g-sub"><span class="min">LIVE</span></div>`
+      : `<div class="g-sub" style="font-size:.7rem">${brDate(m.date)}</div>`;
+
+  return `<div class="grow bmatch" data-mid="${m.id}">
+    ${sideBtn(m, 'home', h, pickable, pick, win, usePicks)}
+    <div class="gmid">${mid}</div>
+    ${sideBtn(m, 'away', a, pickable, pick, win, usePicks)}
+  </div>`;
+}
+
+function sideBtn(m, side, info, pickable, pick, win, usePicks) {
+  const right = side === 'away';
+  if (!info.code) {
+    return `<div class="gteam bside ${right ? 'right' : ''}">
+      ${right ? `<span class="tbd">TBD</span><span class="bempty"></span>` : `<span class="bempty"></span><span class="tbd">TBD</span>`}
+    </div>`;
   }
-  return `<button class="${cls.join(' ')}" ${attrs} type="button">
-    ${info.code ? flagImg(info.code, 'bflag') : ''}</button>`;
+  const cls = ['gteam', 'bside']; if (right) cls.push('right');
+  let attrs = '';
+  if (pickable && info.code) {
+    attrs = `data-act data-side="${side}" data-code="${info.code}"`;
+    if (pick === info.code) cls.push('sel');
+    else if (pick) cls.push('dim');
+  } else if (win) {
+    cls.push(win === info.code ? 'won' : 'lost');
+  }
+  if (info.picked && info.real) cls.push(info.real === info.code ? 'correct' : 'wrong');
+  const flag = flagImg(info.code, 'flag');
+  const name = `<span>${teamName(info.code)}</span>`;
+  const tag = pickable ? 'button' : 'div';
+  return `<${tag} class="${cls.join(' ')}" ${attrs} ${pickable ? 'type="button"' : ''}>
+    ${right ? name + flag : flag + name}</${tag}>`;
 }
 
-/* ---------- interactions ---------- */
+function champCard(usePicks) {
+  const champ = usePicks ? (activePicks()[BR.f.id] || brWinner(BR.f)) : brWinner(BR.f);
+  return `<div class="champ-card">
+    <svg class="trophy" viewBox="0 0 24 24"><path d="M6 3h12v2h3v3c0 2.8-2.2 5-5 5h-.4A6 6 0 0 1 13 15.9V18h3v2H8v-2h3v-2.1A6 6 0 0 1 8.4 13H8c-2.8 0-5-2.2-5-5V5h3V3zm-1 4v1c0 1.7 1.3 3 3 3V7H5zm14 0h-3v4c1.7 0 3-1.3 3-3V7z" fill="#C7A24A"/></svg>
+    <div class="champ ${champ ? '' : 'empty'}">${champ ? flagImg(champ, 'bflag') : ''}</div>
+    <div class="champ-name">${champ ? teamName(champ) : 'Champion'}</div>
+  </div>`;
+}
+
+function brDate(iso) {
+  const dt = new Date(iso), now = new Date();
+  if (dt.toDateString() === now.toDateString())
+    return 'Today ' + dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return dt.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+/* ---------- interactions (no full re-renders while picking) ---------- */
 function bindBracket() {
   if (brError) {
     const r = document.getElementById('br-retry');
@@ -224,6 +249,7 @@ function bindBracket() {
   if (make) make.addEventListener('click', () => {
     brEditing = true;
     try { brDraft = JSON.parse(localStorage.getItem('wc-bracket-draft') || '{}'); } catch (e) { brDraft = {}; }
+    brRound = defaultRound();
     navigate('bracket');
   });
 
@@ -246,19 +272,51 @@ function bindBracket() {
     }
   });
 
-  document.querySelectorAll('.seg-btn').forEach(b =>
+  // Live | My picks
+  document.querySelectorAll('[data-view]').forEach(b =>
     b.addEventListener('click', () => { brView = b.getAttribute('data-view'); navigate('bracket'); }));
 
-  document.querySelectorAll('[data-pick]').forEach(b =>
+  // round switcher — swaps only the list body
+  document.querySelectorAll('[data-round]').forEach(b =>
     b.addEventListener('click', () => {
-      brDraft[b.getAttribute('data-pick')] = b.getAttribute('data-code');
-      pruneDraft();
-      try { localStorage.setItem('wc-bracket-draft', JSON.stringify(brDraft)); } catch (e) {}
-      navigate('bracket');
+      brRound = b.getAttribute('data-round');
+      document.querySelectorAll('[data-round]').forEach(x =>
+        x.classList.toggle('on', x.getAttribute('data-round') === brRound));
+      document.getElementById('br-body').innerHTML =
+        roundHtml(brRound, brEditing || brView === 'picks');
     }));
+
+  // picking — updates the tapped row IN PLACE (no blink)
+  const body = document.getElementById('br-body');
+  if (body) body.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('[data-act]');
+    if (!btn || !brEditing) return;
+    const row = btn.closest('.bmatch');
+    const mid = row.getAttribute('data-mid');
+    brDraft[mid] = btn.getAttribute('data-code');
+    pruneDraft();
+    try { localStorage.setItem('wc-bracket-draft', JSON.stringify(brDraft)); } catch (e) {}
+    row.querySelectorAll('[data-act]').forEach(s => {
+      const isSel = s.getAttribute('data-code') === brDraft[mid];
+      s.classList.toggle('sel', isSel);
+      s.classList.toggle('dim', !isSel);
+    });
+    // picking the Final also crowns the champion card, in place
+    const cc = document.querySelector('.champ-card');
+    if (cc && mid === BR.f.id) cc.outerHTML = champCard(true);
+    refreshEditFooter();
+  });
 }
 
-/* drop downstream picks that no longer follow from earlier choices */
+function refreshEditFooter() {
+  const need = pickableMatches();
+  const done = need.filter(m => brDraft[m.id]).length;
+  const prog = document.getElementById('br-progress');
+  const save = document.getElementById('br-save');
+  if (prog) prog.textContent = `${done}/${need.length}`;
+  if (save) save.disabled = done !== need.length;
+}
+
 function pruneDraft() {
   [...BR.r16, ...BR.qf, ...BR.sf, BR.f].forEach(m => {
     const p = brDraft[m.id];
