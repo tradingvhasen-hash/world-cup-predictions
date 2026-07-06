@@ -23,6 +23,14 @@ function renderProfile() {
            : `<div class="prof-av letter">${(em[0] || '?').toUpperCase()}</div>`}
       <div class="prof-email">${em}</div>
     </div>
+    <h2 class="glabel" style="margin-left:4px">Name on shared images</h2>
+    <div class="auth-fields">
+      <input type="text" id="prof-fn" class="afield" placeholder="First name"
+             value="${(meta.full_name || meta.name || '').split(' ')[0] || ''}">
+      <input type="text" id="prof-ln" class="afield" placeholder="Last name"
+             value="${(meta.full_name || meta.name || '').split(' ').slice(1).join(' ') || ''}">
+    </div>
+    <button class="pred-save" id="prof-save" type="button">Save name</button>
     <button class="prof-del" id="prof-del" type="button">Delete account</button>
     <p class="prof-note">Deleting your account removes your bracket and signs you out.
       It cannot be undone, and this email can’t be used again.</p>
@@ -32,6 +40,18 @@ function renderProfile() {
 function bindProfile() {
   const si = document.getElementById('prof-signin');
   if (si) { si.addEventListener('click', () => openAuth()); return; }
+
+  const saveBtn = document.getElementById('prof-save');
+  if (saveBtn) saveBtn.addEventListener('click', async () => {
+    const fn = document.getElementById('prof-fn').value.trim();
+    const ln = document.getElementById('prof-ln').value.trim();
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    const { error } = await sb.auth.updateUser({ data: { full_name: `${fn} ${ln}`.trim() } });
+    saveBtn.disabled = false;
+    saveBtn.textContent = error ? 'Could not save' : 'Saved';
+    setTimeout(() => { saveBtn.textContent = 'Save name'; }, 1500);
+  });
 
   const del = document.getElementById('prof-del');
   if (!del) return;

@@ -25,6 +25,8 @@ function showLogin() {
 
       <form id="auth-form" class="auth-form">
         <div class="auth-fields">
+          ${su ? `<input type="text" id="auth-fn" class="afield" placeholder="First name" autocomplete="given-name">
+          <input type="text" id="auth-ln" class="afield" placeholder="Last name" autocomplete="family-name">` : ''}
           <input type="email" id="auth-email" class="afield" placeholder="Email"
                  autocomplete="email" required>
           <input type="password" id="auth-pass" class="afield" placeholder="Password"
@@ -78,7 +80,9 @@ async function onAuthSubmit(e) {
 
   try {
     if (authMode === 'signup') {
-      const { data, error } = await doSignUp(email, pass);
+      const fn = (document.getElementById('auth-fn')?.value || '').trim();
+      const ln = (document.getElementById('auth-ln')?.value || '').trim();
+      const { data, error } = await doSignUp(email, pass, `${fn} ${ln}`.trim());
       if (error) {
         authMsg(/database error/i.test(error.message)
           ? 'This email can’t be used. It may belong to a deleted account.'

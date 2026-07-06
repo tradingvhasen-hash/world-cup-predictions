@@ -30,8 +30,41 @@ async function refreshMatches() {
   const res = await fetch(`${ESPN_BASE}/scoreboard?dates=${espnDateRange()}`);
   if (!res.ok) throw new Error('ESPN scoreboard ' + res.status);
   ingestScoreboard(await res.json());
+  injectDemoMatch();
   matchesLoaded = true;
   matchesError = false;
+}
+
+/* ---------- hidden demo mode (?demo in the URL) ----------
+   Shows a fake live match with a full set of events so the live design can
+   be previewed even when no real match is being played. */
+const WC_DEMO = /[?&#]demo/.test(window.location.search + window.location.hash);
+
+const DEMO_EVENTS = [
+  { minute: "76'", typeText: 'Substitution', text: 'Substitution, Spain. Fermín López replaces Pedri.', side: 'away' },
+  { minute: "71'", typeText: 'Goal', text: 'Goal! Portugal 2, Spain 1. Cristiano Ronaldo (Portugal) converts the penalty with a right footed shot to the bottom left corner.', side: 'home' },
+  { minute: "70'", typeText: 'Yellow Card', text: 'Marc Cucurella (Spain) is shown the yellow card for a bad foul.', side: 'away' },
+  { minute: "64'", typeText: 'Video Review', text: 'VAR Decision: No penalty to Spain after review.', side: 'away' },
+  { minute: "58'", typeText: 'Goal', text: 'Goal! Portugal 1, Spain 1. Lamine Yamal (Spain) left footed shot from outside the box to the top right corner.', side: 'away' },
+  { minute: "46'", typeText: 'Start 2nd Half', text: 'Start 2nd Half', side: null },
+  { minute: "45'", typeText: 'Halftime', text: 'Halftime', side: null },
+  { minute: "33'", typeText: 'Red Card', text: 'Robin Le Normand (Spain) is shown the red card.', side: 'away' },
+  { minute: "21'", typeText: 'Goal', text: 'Goal! Portugal 1, Spain 0. Bruno Fernandes (Portugal) right footed shot from the centre of the box.', side: 'home' },
+  { minute: "1'", typeText: 'Kickoff', text: 'Kickoff', side: null },
+];
+
+function injectDemoMatch() {
+  if (!WC_DEMO) return;
+  const withLogo = Object.keys(TEAMS).filter(c => TEAMS[c].logo);
+  const h = withLogo.includes('POR') ? 'POR' : withLogo[0];
+  const a = withLogo.includes('ESP') ? 'ESP' : withLogo[1] || withLogo[0];
+  if (!h || !a) return;
+  MATCHES.unshift({
+    id: 'demo1', status: 'live', home: h, away: a,
+    kickoff: new Date(Date.now() - 78 * 60000).toISOString(),
+    homeScore: 2, awayScore: 1, minute: "78'", statusDetail: "78'",
+    stage: 'FIFA World Cup',
+  });
 }
 
 function mapState(state) {
@@ -91,6 +124,7 @@ function isNoiseEvent(e) {
 
 /* Per-match live events (goals, cards, subs, VAR) newest-first, noise removed. */
 async function espnFetchEvents(eventId) {
+  if (eventId === 'demo1') return DEMO_EVENTS.slice();
   try {
     const res = await fetch(`${ESPN_BASE}/summary?event=${eventId}`);
     if (!res.ok) return [];

@@ -13,7 +13,10 @@ let currentUser = null;
 let appStarted  = false;
 
 /* ---------- helpers ---------- */
-async function doSignUp(email, password) { return sb.auth.signUp({ email, password }); }
+async function doSignUp(email, password, fullName) {
+  return sb.auth.signUp({ email, password,
+    options: fullName ? { data: { full_name: fullName } } : undefined });
+}
 async function doSignIn(email, password) { return sb.auth.signInWithPassword({ email, password }); }
 async function doSignOut() { await sb.auth.signOut(); }
 async function doSendReset(email) {

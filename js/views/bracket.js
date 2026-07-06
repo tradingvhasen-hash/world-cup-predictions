@@ -544,16 +544,44 @@ async function buildShareImage() {
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const x = cv.getContext('2d');
   const FONT = '-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
+  // shrink-then-ellipsize text so long names never collide
+  const fitText = (txt, maxW, base, min, weight) => {
+    let size = base;
+    x.font = `${weight} ${size}px ${FONT}`;
+    while (x.measureText(txt).width > maxW && size > min) { size -= 2; x.font = `${weight} ${size}px ${FONT}`; }
+    if (x.measureText(txt).width > maxW) {
+      while (txt.length > 3 && x.measureText(txt + '…').width > maxW) txt = txt.slice(0, -1);
+      txt += '…';
+    }
+    return txt;
+  };
 
   // background
   x.fillStyle = '#F4F4F6'; x.fillRect(0, 0, W, H);
 
-  // header
-  x.fillStyle = '#111114'; x.textAlign = 'center';
-  x.font = `800 54px ${FONT}`; x.fillText('World Cup ’26', W / 2, 130);
+  // header: the person's name is the hero when set
+  const md = (currentUser && currentUser.user_metadata) || {};
+  const who = (md.full_name || md.name || '').trim();
   const s = bracketScore();
-  x.fillStyle = '#8A8A90'; x.font = `600 32px ${FONT}`;
-  x.fillText(s && s.decided ? `My bracket · ${s.got} pts` : 'My bracket', W / 2, 182);
+  x.textAlign = 'center';
+  if (who) {
+    x.fillStyle = '#8A8A90'; x.font = `600 25px ${FONT}`;
+    try { x.letterSpacing = '7px'; } catch (e) {}
+    x.fillText('WORLD CUP ’26 · MY BRACKET', W / 2, 104);
+    try { x.letterSpacing = '0px'; } catch (e) {}
+    x.fillStyle = '#111114';
+    const whoFit = fitText(who, 920, 60, 40, 800);
+    x.fillText(whoFit, W / 2, 178);
+    if (s && s.decided) {
+      x.fillStyle = '#8A8A90'; x.font = `600 30px ${FONT}`;
+      x.fillText(`${s.got} pts`, W / 2, 222);
+    }
+  } else {
+    x.fillStyle = '#111114';
+    x.font = `800 54px ${FONT}`; x.fillText('World Cup ’26', W / 2, 130);
+    x.fillStyle = '#8A8A90'; x.font = `600 32px ${FONT}`;
+    x.fillText(s && s.decided ? `My bracket · ${s.got} pts` : 'My bracket', W / 2, 182);
+  }
 
   // flag helper: white pad ring + clipped, over-scaled image (crops bands)
   function flag(cx, cy, r, code, ring, ringW) {
@@ -594,14 +622,14 @@ async function buildShareImage() {
   const fy = cardY + 250;
   if (fh.code) flag(258, fy, 66, fh.code, ringFor(BR.f, 'home')); else hole(258, fy, 62);
   if (fa.code) flag(W - 258, fy, 66, fa.code, ringFor(BR.f, 'away')); else hole(W - 258, fy, 62);
-  x.fillStyle = '#111114'; x.font = `600 30px ${FONT}`;
-  x.fillText(fh.code ? teamName(fh.code) : 'TBD', 258, fy + 112);
-  x.fillText(fa.code ? teamName(fa.code) : 'TBD', W - 258, fy + 112);
+  x.fillStyle = '#111114';
+  x.fillText(fitText(fh.code ? teamName(fh.code) : 'TBD', 290, 30, 22, 600), 258, fy + 112);
+  x.fillText(fitText(fa.code ? teamName(fa.code) : 'TBD', 290, 30, 22, 600), W - 258, fy + 112);
   if (champ) {
     const cw = brWinner(BR.f);
     flag(W / 2, fy - 14, 86, champ, cw ? (cw === champ ? '#1F8A5B' : '#D64545') : '#C7A24A', 8);
-    x.fillStyle = '#111114'; x.font = `800 38px ${FONT}`;
-    x.fillText(teamName(champ), W / 2, fy + 124);
+    x.fillStyle = '#111114';
+    x.fillText(fitText(teamName(champ), 360, 38, 26, 800), W / 2, fy + 124);
   } else { hole(W / 2, fy - 14, 82); }
 
   // tree
