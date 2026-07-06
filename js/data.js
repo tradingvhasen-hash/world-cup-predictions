@@ -35,8 +35,8 @@ function teamName(code) { return TEAMS[code] ? TEAMS[code].name : 'TBD'; }
 function flagImg(code, cls, w) {
   const t = TEAMS[code];
   if (t && t.logo) {
-    return `<span class="fwrap ${cls}"><img class="fimg" src="${t.logo}" alt="${t.name}" loading="lazy"
-        onerror="this.parentElement.style.display='none';this.parentElement.nextElementSibling.style.display='inline-flex'"></span>` +
+    return `<span class="fwrap ${cls}"><span class="fclip"><img class="fimg" src="${t.logo}" alt="${t.name}" loading="lazy"
+        onerror="var w=this.closest('.fwrap'); if(w){w.style.display='none'; if(w.nextElementSibling) w.nextElementSibling.style.display='inline-flex'}"></span></span>` +
       `<span class="flag-fallback ${cls}" style="display:none">${code.slice(0, 3)}</span>`;
   }
   return `<span class="flag-fallback ${cls}">${code.slice(0, 3)}</span>`;

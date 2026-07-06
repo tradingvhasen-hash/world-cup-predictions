@@ -135,11 +135,19 @@ function renderBracket() {
     </div>`;
   }
 
+  const shareBtn = brEditing ? `<button class="br-cancel" id="br-cancel">Cancel</button>`
+    : `<button class="br-share ${userBracket ? '' : 'off'}" id="br-share" type="button" aria-label="Share">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3v12M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/>
+        </svg></button>`;
+
   return `<div class="page br-page ${brEditing ? 'editing' : ''}">
     <div class="br-title-row">
       <h1 class="page-title">Bracket</h1>
-      ${brEditing ? `<button class="br-cancel" id="br-cancel">Cancel</button>` : ''}
+      ${shareBtn}
     </div>
+    <p class="br-note" id="br-share-note" style="display:none">Save your bracket first — then you can share it.</p>
     ${head}
     ${treeHtml()}
     ${brEditing ? editFooter() : ''}
@@ -336,6 +344,16 @@ function bindBracket() {
   document.querySelectorAll('[data-view]').forEach(b =>
     b.addEventListener('click', () => { brView = b.getAttribute('data-view'); navigate('bracket'); }));
 
+  const share = document.getElementById('br-share');
+  if (share) share.addEventListener('click', () => {
+    if (!userBracket) {
+      const n = document.getElementById('br-share-note');
+      if (n) { n.style.display = 'block'; clearTimeout(n._t); n._t = setTimeout(() => n.style.display = 'none', 2200); }
+      return;
+    }
+    shareBracket();
+  });
+
   // tap a flag (tree or final card) → that team advances (in-place, no blink)
   const tree = document.querySelector('.br-page');
   if (tree) tree.addEventListener('click', (ev) => {
@@ -351,4 +369,190 @@ function bindBracket() {
   });
 
   syncTree();
+}
+
+/* ============================================================================
+   SHARE — draw the user's bracket as a 1080×1920 story image and share it.
+   ========================================================================== */
+async function shareBracket() {
+  const btn = document.getElementById('br-share');
+  try {
+    if (btn) btn.classList.add('busy');
+    const blob = await buildShareImage();
+    const file = new File([blob], 'my-bracket.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file] });
+    } else {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'my-bracket.png';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    }
+  } catch (e) {
+    if (!e || e.name !== 'AbortError') alert('Could not create the share image.');
+  } finally {
+    if (btn) btn.classList.remove('busy');
+  }
+}
+
+function loadFlagImg(code) {
+  return new Promise(res => {
+    const t = TEAMS[code];
+    if (!t || !t.logo) return res(null);
+    const im = new Image();
+    im.crossOrigin = 'anonymous';
+    im.onload = () => res(im);
+    im.onerror = () => res(null);
+    im.src = t.logo;
+  });
+}
+
+/* slot occupant in "my picks" view (share always shows the user's bracket) */
+function shareSlot(m, side) { return slotInfo(m, side, true); }
+
+async function buildShareImage() {
+  // tree columns exactly like on screen
+  const start = brStartRound();
+  const kids = m => (BR.feeders[m.id] || []).map(id => BR.byId[id]).filter(Boolean);
+  const colsDown = [[BR.sf[0]]], colsDownR = [[BR.sf[1]]];
+  while (true) {
+    const nextL = colsDown[colsDown.length - 1].flatMap(kids);
+    if (!nextL.length || brRoundOf(nextL[0]) === 'r32' ||
+        (start === 'qf' && brRoundOf(nextL[0]) === 'r16') ||
+        (start === 'sf' && brRoundOf(nextL[0]) !== 'sf')) break;
+    colsDown.push(nextL);
+    colsDownR.push(colsDownR[colsDownR.length - 1].flatMap(kids));
+  }
+  const colsL = colsDown.slice().reverse();
+  const colsR = colsDownR.slice().reverse();
+
+  // preload every flag used
+  const codes = new Set();
+  [...BR.r16, ...BR.qf, ...BR.sf, BR.f].forEach(m => ['home', 'away'].forEach(s => {
+    const c = shareSlot(m, s).code; if (c) codes.add(c);
+  }));
+  const champ = userBracket.picks[BR.f.id] || brWinner(BR.f);
+  if (champ) codes.add(champ);
+  const imgs = {};
+  await Promise.all([...codes].map(async c => { imgs[c] = await loadFlagImg(c); }));
+
+  const W = 1080, H = 1920;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const x = cv.getContext('2d');
+  const FONT = '-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
+
+  // background
+  x.fillStyle = '#F4F4F6'; x.fillRect(0, 0, W, H);
+
+  // header
+  x.fillStyle = '#111114'; x.textAlign = 'center';
+  x.font = `800 54px ${FONT}`; x.fillText('World Cup ’26', W / 2, 130);
+  const s = bracketScore();
+  x.fillStyle = '#8A8A90'; x.font = `600 32px ${FONT}`;
+  x.fillText(s && s.decided ? `My bracket · ${s.got} pts` : 'My bracket', W / 2, 182);
+
+  // flag helper: white pad ring + clipped, over-scaled image (crops bands)
+  function flag(cx, cy, r, code, ring, ringW) {
+    x.save(); x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fillStyle = '#fff'; x.fill(); x.clip();
+    const im = imgs[code];
+    if (im) { const rr = r - 4, d = rr * 3.7; 
+      x.save(); x.beginPath(); x.arc(cx, cy, rr, 0, 7); x.clip();
+      x.drawImage(im, cx - d / 2, cy - d / 2, d, d); x.restore(); }
+    x.restore();
+    x.beginPath(); x.arc(cx, cy, r, 0, 7);
+    x.strokeStyle = ring || 'rgba(17,17,20,.18)'; x.lineWidth = ringW || 3; x.stroke();
+  }
+  function hole(cx, cy, r) {
+    x.beginPath(); x.arc(cx, cy, r, 0, 7);
+    x.setLineDash([7, 8]); x.strokeStyle = '#D4D4D9'; x.lineWidth = 3; x.stroke(); x.setLineDash([]);
+  }
+  function ringFor(m, side, base) {
+    const info = shareSlot(m, side);
+    if (info.picked && info.real) return info.real === info.code ? '#1F8A5B' : '#D64545';
+    return base;
+  }
+
+  // final card
+  const cardY = 226, cardH = 380;
+  x.save();
+  x.shadowColor = 'rgba(17,17,20,.07)'; x.shadowBlur = 30; x.shadowOffsetY = 8;
+  x.fillStyle = '#fff';
+  x.beginPath(); x.roundRect(64, cardY, W - 128, cardH, 44); x.fill();
+  x.restore();
+  // trophy (thin line, gold)
+  x.save(); x.translate(W / 2 - 12 * 3.4, cardY + 34); x.scale(3.4, 3.4);
+  x.strokeStyle = '#C7A24A'; x.lineWidth = 1.6; x.lineCap = 'round'; x.lineJoin = 'round';
+  x.stroke(new Path2D('M8 21h8M12 17v4'));
+  x.stroke(new Path2D('M7 4h10v6a5 5 0 0 1-10 0V4Z'));
+  x.stroke(new Path2D('M7 6H4v1a4 4 0 0 0 3 3.87M17 6h3v1a4 4 0 0 1-3 3.87'));
+  x.restore();
+  const fh = shareSlot(BR.f, 'home'), fa = shareSlot(BR.f, 'away');
+  const fy = cardY + 210;
+  if (fh.code) flag(258, fy, 66, fh.code, ringFor(BR.f, 'home')); else hole(258, fy, 62);
+  if (fa.code) flag(W - 258, fy, 66, fa.code, ringFor(BR.f, 'away')); else hole(W - 258, fy, 62);
+  x.fillStyle = '#111114'; x.font = `600 30px ${FONT}`;
+  x.fillText(fh.code ? teamName(fh.code) : 'TBD', 258, fy + 112);
+  x.fillText(fa.code ? teamName(fa.code) : 'TBD', W - 258, fy + 112);
+  if (champ) {
+    const cw = brWinner(BR.f);
+    flag(W / 2, fy - 8, 88, champ, cw ? (cw === champ ? '#1F8A5B' : '#D64545') : '#C7A24A', 8);
+    x.fillStyle = '#111114'; x.font = `800 38px ${FONT}`;
+    x.fillText(teamName(champ), W / 2, fy + 126);
+  } else { hole(W / 2, fy - 8, 84); }
+
+  // tree
+  const top = cardY + cardH + 70, bot = H - 120, Ht = bot - top;
+  const M = 56, gapC = 96, nCols = colsL.length * 2;
+  const colW = (W - 2 * M - gapC) / nCols;
+  const xs = i => M + colW * (i + .5);                       // left col centre
+  const xsR = i => W - M - colW * (i + .5);                  // right col centre (outermost i=0)
+  const R = 40, gapS = 58;
+  const pairCy = (col, j, n) => top + Ht * (j + .5) / n;
+
+  function drawHalf(cols, mirror) {
+    const X = mirror ? xsR : xs;
+    cols.forEach((ms, i) => {
+      const n = ms.length;
+      ms.forEach((m, j) => {
+        const cy = pairCy(i, j, n);
+        const y1 = cy - gapS, y2 = cy + gapS;
+        // connector to next column
+        const dir = mirror ? -1 : 1;
+        const bx = X(i) + dir * (R + 22);
+        x.strokeStyle = '#C4C4CC'; x.lineWidth = 3.5; x.lineJoin = 'round'; x.lineCap = 'round';
+        x.beginPath();
+        x.moveTo(X(i) + dir * (R + 6), y1); x.lineTo(bx, y1); x.lineTo(bx, y2);
+        x.lineTo(X(i) + dir * (R + 6), y2); x.stroke();
+        if (i < cols.length - 1) {
+          // stub to the slot this match feeds
+          const nm = cols[i + 1].find(q => (BR.feeders[q.id] || []).includes(m.id));
+          if (nm) {
+            const jj = cols[i + 1].indexOf(nm);
+            const side = (BR.feeders[nm.id] || []).indexOf(m.id);
+            const ty = pairCy(i + 1, jj, cols[i + 1].length) + (side === 0 ? -gapS : gapS);
+            const midX = (bx + X(i + 1) - dir * (R + 6)) / 2;
+            x.beginPath(); x.moveTo(bx, cy); x.lineTo(midX, cy);
+            x.lineTo(midX, ty); x.lineTo(X(i + 1) - dir * (R + 6), ty); x.stroke();
+          }
+        }
+        // slots
+        ['home', 'away'].forEach((sd, k) => {
+          const info = shareSlot(m, sd);
+          const sy = k === 0 ? y1 : y2;
+          if (info.code) flag(X(i), sy, R, info.code, ringFor(m, sd));
+          else hole(X(i), sy, R - 4);
+        });
+      });
+    });
+  }
+  drawHalf(colsL, false);
+  drawHalf(colsR, true);
+
+  // footer wordmark
+  x.fillStyle = '#B4B4BA'; x.font = `600 26px ${FONT}`;
+  x.fillText('World Cup ’26 · Predictions', W / 2, H - 52);
+
+  return await new Promise((res, rej) =>
+    cv.toBlob(b => b ? res(b) : rej(new Error('blob')), 'image/png'));
 }

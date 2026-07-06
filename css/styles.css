@@ -228,6 +228,16 @@ button.gteam:active .flag{transform:scale(.86)}
 .br-title-row{display:flex; align-items:baseline; justify-content:space-between}
 .br-cancel{border:none; background:none; color:var(--muted); font-size:.9rem; font-weight:500;
   cursor:pointer; padding:6px}
+.br-share{
+  width:40px; height:40px; border-radius:50%; border:none; background:var(--card);
+  box-shadow:var(--shadow); color:var(--ink); display:flex; align-items:center;
+  justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent;
+  transition:transform .12s, opacity .2s;
+}
+.br-share:active{transform:scale(.92)}
+.br-share svg{width:19px; height:19px}
+.br-share.off{color:#C4C4CA}
+.br-share.busy{opacity:.5; pointer-events:none}
 .br-page.editing{padding-bottom:120px}
 
 /* ---------- the final, face to face ---------- */
@@ -260,19 +270,19 @@ button.gteam:active .flag{transform:scale(.86)}
 /* clear connector: bracket joining the pair + a stub toward the next round */
 .bpair.l::after{
   content:""; position:absolute; right:-7px; top:25%; bottom:25%; width:7px;
-  border:1.5px solid #D9D9DE; border-left:none; border-radius:0 8px 8px 0;
+  border:2px solid #C4C4CC; border-left:none; border-radius:0 9px 9px 0;
 }
 .bpair.l::before{
-  content:""; position:absolute; right:-13px; top:50%; width:6px; height:1.5px;
-  background:#D9D9DE; transform:translateY(-50%);
+  content:""; position:absolute; right:-14px; top:50%; width:7px; height:2px;
+  background:#C4C4CC; transform:translateY(-50%); border-radius:1px;
 }
 .bpair.r::after{
   content:""; position:absolute; left:-7px; top:25%; bottom:25%; width:7px;
-  border:1.5px solid #D9D9DE; border-right:none; border-radius:8px 0 0 8px;
+  border:2px solid #C4C4CC; border-right:none; border-radius:9px 0 0 9px;
 }
 .bpair.r::before{
-  content:""; position:absolute; left:-13px; top:50%; width:6px; height:1.5px;
-  background:#D9D9DE; transform:translateY(-50%);
+  content:""; position:absolute; left:-14px; top:50%; width:7px; height:2px;
+  background:#C4C4CC; transform:translateY(-50%); border-radius:1px;
 }
 .bslot{
   width:40px; height:40px; border-radius:50%; border:none; background:none; padding:0;
@@ -377,12 +387,14 @@ button.bside:active .flag{transform:scale(.9)}
 }
 .tip.open .tip-bubble{opacity:1; transform:translateX(-50%) translateY(0)}
 
-/* ---------- flags: clipped circles (crop ESPN's baked white bands) ---------- */
+/* ---------- flags: ring · tiny white gap · flag (luxury avatar style) ---------- */
 .fwrap{
   position:relative; display:inline-flex; align-items:center; justify-content:center;
-  overflow:hidden; border-radius:50%; flex:none; background:#fff;
+  border-radius:50%; flex:none; background:#fff; padding:2px;
+  box-shadow:0 0 0 1.2px rgba(17,17,20,.16) !important;
 }
-.fwrap .fimg{width:100%; height:100%; object-fit:cover; transform:scale(1.52); display:block}
+.fclip{width:100%; height:100%; border-radius:50%; overflow:hidden; display:block}
+.fimg{width:100%; height:100%; object-fit:cover; transform:scale(1.85); display:block}
 .flag-fallback{
   align-items:center; justify-content:center; display:inline-flex;
   background:var(--green-tint); color:var(--green); font-weight:700; border-radius:50%;
