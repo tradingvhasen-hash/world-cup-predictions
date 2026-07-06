@@ -374,26 +374,47 @@ function bindBracket() {
 /* ============================================================================
    SHARE — draw the user's bracket as a 1080×1920 story image and share it.
    ========================================================================== */
+/* Generate the image, show it in an in-app preview first (long-press saves it
+   straight to Photos on iOS with a proper thumbnail), with a native Share
+   button beneath it. */
+let shareBlob = null;
+
 async function shareBracket() {
   const btn = document.getElementById('br-share');
   try {
     if (btn) btn.classList.add('busy');
-    const blob = await buildShareImage();
-    const file = new File([blob], 'my-bracket.png', { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file] });
-    } else {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'my-bracket.png';
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    }
+    shareBlob = await buildShareImage();
+    showShareOverlay(URL.createObjectURL(shareBlob));
   } catch (e) {
-    if (!e || e.name !== 'AbortError') alert('Could not create the share image.');
+    alert('Could not create the share image.');
   } finally {
     if (btn) btn.classList.remove('busy');
   }
+}
+
+function showShareOverlay(url) {
+  const ov = document.createElement('div');
+  ov.className = 'share-ov';
+  ov.innerHTML = `
+    <button class="share-x" type="button" aria-label="Close">✕</button>
+    <img class="share-img" src="${url}" alt="My bracket">
+    <p class="share-hint">Press and hold the image to save it to Photos</p>
+    <button class="br-btn solid share-go" type="button">Share</button>`;
+  document.body.appendChild(ov);
+  const close = () => { ov.remove(); URL.revokeObjectURL(url); };
+  ov.querySelector('.share-x').addEventListener('click', close);
+  ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+  ov.querySelector('.share-go').addEventListener('click', async () => {
+    try {
+      const file = new File([shareBlob], 'my-bracket.jpg', { type: 'image/jpeg' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file] });
+      } else {
+        const a = document.createElement('a');
+        a.href = url; a.download = 'my-bracket.jpg'; a.click();
+      }
+    } catch (e) { /* user cancelled the sheet — fine */ }
+  });
 }
 
 function loadFlagImg(code) {
@@ -402,8 +423,11 @@ function loadFlagImg(code) {
     if (!t || !t.logo) return res(null);
     const im = new Image();
     im.crossOrigin = 'anonymous';
-    im.onload = () => res(im);
-    im.onerror = () => res(null);
+    let done = false;
+    const finish = v => { if (!done) { done = true; clearTimeout(tm); res(v); } };
+    const tm = setTimeout(() => finish(null), 4000);   // never hang on a slow flag
+    im.onload = () => finish(im);
+    im.onerror = () => finish(null);
     im.src = t.logo;
   });
 }
@@ -554,5 +578,5 @@ async function buildShareImage() {
   x.fillText('World Cup ’26 · Predictions', W / 2, H - 52);
 
   return await new Promise((res, rej) =>
-    cv.toBlob(b => b ? res(b) : rej(new Error('blob')), 'image/png'));
+    cv.toBlob(b => b ? res(b) : rej(new Error('blob')), 'image/jpeg', 0.92));
 }
