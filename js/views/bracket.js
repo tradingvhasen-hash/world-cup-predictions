@@ -155,16 +155,13 @@ function editFooter() {
   </div>`;
 }
 
-/* Build the mirrored tree. Left half = SF1's subtree, right half = SF2's. */
+/* The Final as a horizontal hero card, then the mirrored tree below it. */
 function treeHtml() {
   const start = brStartRound();
   const sf1 = BR.sf[0], sf2 = BR.sf[1];
   const kids = m => (BR.feeders[m.id] || []).map(id => BR.byId[id]).filter(Boolean);
 
-  const leftCols = [], rightCols = [];
-  let L = [sf1], R = [sf2];
-  const order = { sf: ['sf'], qf: ['qf', 'sf'], r16: ['r16', 'qf', 'sf'] }[start];
-  // walk down from SF to the start round, collecting columns inner→outer
+  // walk down from the SFs to the start round, collecting columns inner→outer
   const colsDown = [[sf1]], colsDownR = [[sf2]];
   while (true) {
     const nextL = colsDown[colsDown.length - 1].flatMap(kids);
@@ -174,21 +171,46 @@ function treeHtml() {
     colsDown.push(nextL);
     colsDownR.push(colsDownR[colsDownR.length - 1].flatMap(kids));
   }
-  // outermost first
-  const colsL = colsDown.slice().reverse();
-  const colsR = colsDownR.slice().reverse();
+  const colsL = colsDown.slice().reverse();       // outermost first
+  const colsR = colsDownR.slice();                // innermost first (mirrored)
 
   const slots = colsL[0].length * 2;
-  const h = Math.max(300, slots * 58);
+  const h = Math.max(260, slots * 62);
   const col = (ms, side) =>
     `<div class="bcol">${ms.map(m => pairHtml(m, side)).join('')}</div>`;
 
-  return `<div class="btree" style="height:${h}px">
+  return `${finalCard()}
+  <div class="btree" style="height:${h}px">
     ${colsL.map(ms => col(ms, 'l')).join('')}
-    ${centreHtml()}
-    ${colsR.slice().reverse().map(ms => col(ms, 'r')).join('')}
-  </div>
-  <div class="br-champ">${champCard()}</div>`;
+    <div class="tsplit"></div>
+    ${colsR.map(ms => col(ms, 'r')).join('')}
+  </div>`;
+}
+
+/* elegant thin-line trophy */
+const TROPHY_SVG = `<svg class="trophy" viewBox="0 0 24 24" fill="none"
+  stroke="#C7A24A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M8 21h8M12 17v4"/>
+  <path d="M7 4h10v6a5 5 0 0 1-10 0V4Z"/>
+  <path d="M7 6H4v1a4 4 0 0 0 3 3.87M17 6h3v1a4 4 0 0 1-3 3.87"/>
+</svg>`;
+
+function finalCard() {
+  return `<section class="final-card">
+    <div class="fc-side">
+      ${slotHtml(BR.f, 'home')}
+      <span class="fc-name" id="sname-${BR.f.id}-home"></span>
+    </div>
+    <div class="fc-centre">
+      ${TROPHY_SVG}
+      <div class="champ empty" id="champ-el"></div>
+      <div class="champ-name" id="champ-name">Champion</div>
+    </div>
+    <div class="fc-side">
+      ${slotHtml(BR.f, 'away')}
+      <span class="fc-name" id="sname-${BR.f.id}-away"></span>
+    </div>
+  </section>`;
 }
 
 function pairHtml(m, side) {
@@ -197,15 +219,7 @@ function pairHtml(m, side) {
   </div>`;
 }
 
-function centreHtml() {
-  return `<div class="bcol centre" data-mid="${BR.f.id}">
-    ${slotHtml(BR.f, 'home')}
-    <svg class="trophy" viewBox="0 0 24 24"><path d="M6 3h12v2h3v3c0 2.8-2.2 5-5 5h-.4A6 6 0 0 1 13 15.9V18h3v2H8v-2h3v-2.1A6 6 0 0 1 8.4 13H8c-2.8 0-5-2.2-5-5V5h3V3zm-1 4v1c0 1.7 1.3 3 3 3V7H5zm14 0h-3v4c1.7 0 3-1.3 3-3V7z" fill="#C7A24A"/></svg>
-    ${slotHtml(BR.f, 'away')}
-  </div>`;
-}
-
-/* one slot; content + state are (re)applied by syncSlot so edits are in-place */
+/* one slot; content + state are (re)applied by syncTree so edits are in-place */
 function slotHtml(m, side) {
   return `<button class="bslot" id="slot-${m.id}-${side}" data-mid="${m.id}" data-side="${side}" type="button">
     ${slotInner(m, side)}</button>`;
@@ -214,15 +228,6 @@ function slotHtml(m, side) {
 function slotInner(m, side) {
   const info = slotInfo(m, side, brEditing || brView === 'picks');
   return info.code ? flagImg(info.code, 'bflag') : `<span class="bhole"></span>`;
-}
-
-function champCard() {
-  const usePicks = brEditing || brView === 'picks';
-  const champ = usePicks ? (activePicks()[BR.f.id] || brWinner(BR.f)) : brWinner(BR.f);
-  return `<div class="champ-card" id="champ-card">
-    <div class="champ ${champ ? '' : 'empty'}">${champ ? flagImg(champ, 'bflag') : ''}</div>
-    <div class="champ-name">${champ ? teamName(champ) : 'Champion'}</div>
-  </div>`;
 }
 
 /* ---------- surgical state sync (no re-renders, no blinking) ---------- */
@@ -248,8 +253,25 @@ function syncTree() {
       el.classList.toggle('tappable', brEditing && m.state === 'pre' && !!code);
     });
   });
-  const cc = document.getElementById('champ-card');
-  if (cc) cc.outerHTML = champCard();
+  // finalist name labels on the final card
+  ['home', 'away'].forEach(side => {
+    const nameEl = document.getElementById(`sname-${BR.f.id}-${side}`);
+    if (nameEl) {
+      const info = slotInfo(BR.f, side, usePicks);
+      nameEl.textContent = info.code ? teamName(info.code) : 'TBD';
+      nameEl.classList.toggle('tbd', !info.code);
+    }
+  });
+  // champion circle + name (in place; image only swaps when it changes)
+  const champ = usePicks ? (activePicks()[BR.f.id] || brWinner(BR.f)) : brWinner(BR.f);
+  const ce = document.getElementById('champ-el');
+  const cn = document.getElementById('champ-name');
+  if (ce && ce.dataset.code !== (champ || '')) {
+    ce.dataset.code = champ || '';
+    ce.innerHTML = champ ? flagImg(champ, 'bflag') : '';
+    ce.classList.toggle('empty', !champ);
+  }
+  if (cn) cn.textContent = champ ? teamName(champ) : 'Champion';
   refreshEditFooter();
 }
 
@@ -314,8 +336,8 @@ function bindBracket() {
   document.querySelectorAll('[data-view]').forEach(b =>
     b.addEventListener('click', () => { brView = b.getAttribute('data-view'); navigate('bracket'); }));
 
-  // tap a flag in the tree → that team advances (in-place, no blink)
-  const tree = document.querySelector('.btree');
+  // tap a flag (tree or final card) → that team advances (in-place, no blink)
+  const tree = document.querySelector('.br-page');
   if (tree) tree.addEventListener('click', (ev) => {
     if (!brEditing) return;
     const el = ev.target.closest('.bslot');

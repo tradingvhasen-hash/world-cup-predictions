@@ -230,20 +230,49 @@ button.gteam:active .flag{transform:scale(.86)}
   cursor:pointer; padding:6px}
 .br-page.editing{padding-bottom:120px}
 
+/* ---------- the final, face to face ---------- */
+.final-card{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  background:var(--card); border-radius:24px; box-shadow:var(--shadow);
+  padding:24px 22px 20px; margin-top:18px;
+}
+.fc-side{flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; min-width:0}
+.fc-side .bslot, .fc-side .bslot .bflag, .fc-side .fwrap.bflag{width:48px; height:48px}
+.fc-side .bhole{width:44px; height:44px}
+.fc-name{font-size:.8rem; font-weight:600; max-width:100%; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap}
+.fc-name.tbd{color:#C6C6CB; font-weight:500}
+.fc-centre{flex:1.1; display:flex; flex-direction:column; align-items:center; gap:7px}
+.trophy{width:24px; height:24px}
+.champ{width:56px; height:56px; border-radius:50%; display:flex; align-items:center;
+  justify-content:center; box-shadow:0 0 0 2.5px #C7A24A}
+.champ.empty{box-shadow:none; border:1.5px dashed #D9C89E}
+.champ .bflag, .champ .fwrap.bflag{width:56px; height:56px}
+.champ-name{font-size:.86rem; font-weight:700}
+
 /* ---------- the tree ---------- */
-.btree{display:flex; align-items:stretch; gap:4px; margin-top:20px}
+.btree{display:flex; align-items:stretch; gap:7px; margin-top:16px}
 .btree .bcol{flex:1; display:flex; flex-direction:column; justify-content:space-around;
   align-items:center; min-width:0}
-.btree .bcol.centre{flex:1.15; justify-content:center; gap:14px}
-.bpair{position:relative; display:flex; flex-direction:column; gap:10px;
+.tsplit{width:10px; flex:none}
+.bpair{position:relative; display:flex; flex-direction:column; gap:12px;
   align-items:center; padding:6px 0}
+/* clear connector: bracket joining the pair + a stub toward the next round */
 .bpair.l::after{
-  content:""; position:absolute; right:-5px; top:26%; bottom:26%; width:5px;
-  border:1.5px solid var(--line); border-left:none; border-radius:0 7px 7px 0;
+  content:""; position:absolute; right:-7px; top:25%; bottom:25%; width:7px;
+  border:1.5px solid #D9D9DE; border-left:none; border-radius:0 8px 8px 0;
+}
+.bpair.l::before{
+  content:""; position:absolute; right:-13px; top:50%; width:6px; height:1.5px;
+  background:#D9D9DE; transform:translateY(-50%);
 }
 .bpair.r::after{
-  content:""; position:absolute; left:-5px; top:26%; bottom:26%; width:5px;
-  border:1.5px solid var(--line); border-right:none; border-radius:7px 0 0 7px;
+  content:""; position:absolute; left:-7px; top:25%; bottom:25%; width:7px;
+  border:1.5px solid #D9D9DE; border-right:none; border-radius:8px 0 0 8px;
+}
+.bpair.r::before{
+  content:""; position:absolute; left:-13px; top:50%; width:6px; height:1.5px;
+  background:#D9D9DE; transform:translateY(-50%);
 }
 .bslot{
   width:40px; height:40px; border-radius:50%; border:none; background:none; padding:0;
