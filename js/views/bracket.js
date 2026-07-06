@@ -115,9 +115,7 @@ function renderBracket() {
 
   let head = '';
   if (brEditing) {
-    head = `<div class="br-bar">
-      <p class="br-note">Tap a flag to send that team through — all the way to the trophy.<br>Saving is permanent: one bracket, forever.</p>
-    </div>`;
+    head = '';
   } else if (userBracket) {
     const s = bracketScore();
     head = `<div class="br-bar">
@@ -131,7 +129,6 @@ function renderBracket() {
   } else {
     head = `<div class="br-bar">
       <button class="br-btn solid wide" id="br-make">Make my bracket</button>
-      <p class="br-note">Pick every winner through to the trophy — one shot, no edits.</p>
     </div>`;
   }
 
@@ -147,7 +144,7 @@ function renderBracket() {
       <h1 class="page-title">Bracket</h1>
       ${shareBtn}
     </div>
-    <p class="br-note" id="br-share-note" style="display:none">Save your bracket first — then you can share it.</p>
+    <p class="br-note" id="br-share-note" style="display:none">Save your bracket first to share it.</p>
     ${head}
     ${treeHtml()}
     ${brEditing ? editFooter() : ''}
@@ -159,7 +156,7 @@ function editFooter() {
   const done = need.filter(m => brDraft[m.id]).length;
   return `<div class="br-foot">
     <span class="br-progress" id="br-progress">${done}/${need.length}</span>
-    <button class="br-btn solid" id="br-save" ${done === need.length ? '' : 'disabled'}>Save — final</button>
+    <button class="br-btn solid" id="br-save" ${done === need.length ? '' : 'disabled'}>Save</button>
   </div>`;
 }
 
@@ -316,7 +313,16 @@ function bindBracket() {
   }
 
   const make = document.getElementById('br-make');
-  if (make) make.addEventListener('click', () => {
+  if (make) make.addEventListener('click', async () => {
+    if (!currentUser) {
+      const go = await appConfirm({
+        title: 'Sign in to play',
+        text: 'You need an account to make and save your bracket.',
+        ok: 'Sign in',
+      });
+      if (go) openAuth();
+      return;
+    }
     brEditing = true;
     try { brDraft = JSON.parse(localStorage.getItem('wc-bracket-draft') || '{}'); } catch (e) { brDraft = {}; }
     navigate('bracket');
@@ -327,7 +333,12 @@ function bindBracket() {
 
   const save = document.getElementById('br-save');
   if (save) save.addEventListener('click', async () => {
-    if (!confirm('Save your bracket? This is final — it can never be changed.')) return;
+    const sure = await appConfirm({
+      title: 'Save your bracket?',
+      text: 'Your bracket is final. It can never be changed.',
+      ok: 'Save',
+    });
+    if (!sure) return;
     save.disabled = true; save.textContent = 'Saving…';
     const res = await saveBracketToDb(brDraft);
     if (res.ok) {
@@ -336,7 +347,7 @@ function bindBracket() {
       updateScoreStrip();
       navigate('bracket');
     } else {
-      save.disabled = false; save.textContent = 'Save — final';
+      save.disabled = false; save.textContent = 'Save';
       alert('Could not save: ' + res.msg);
     }
   });
@@ -358,6 +369,7 @@ function bindBracket() {
   const tree = document.querySelector('.br-page');
   if (tree) tree.addEventListener('click', (ev) => {
     if (!brEditing) return;
+    if (brDragUsed) { brDragUsed = false; return; }   // a drag just ended
     const el = ev.target.closest('.bslot');
     if (!el || !el.classList.contains('tappable')) return;
     const m = BR.byId[el.dataset.mid];
@@ -368,7 +380,71 @@ function bindBracket() {
     syncTree();
   });
 
+  if (brEditing) enableBracketDrag();
   syncTree();
+}
+
+/* ---------- drag a flag onto the next round's slot (alternative to tapping) */
+let brDragUsed = false;
+
+function enableBracketDrag() {
+  const page = document.querySelector('.br-page');
+  if (!page) return;
+  let src = null, ghost = null, started = false, sx = 0, sy = 0;
+
+  const cleanup = () => {
+    if (ghost) ghost.remove();
+    if (src) src.classList.remove('drag-src');
+    src = null; ghost = null; started = false;
+  };
+
+  page.addEventListener('pointerdown', (e) => {
+    if (!brEditing) return;
+    const el = e.target.closest('.bslot.tappable');
+    if (!el) return;
+    src = el; sx = e.clientX; sy = e.clientY; started = false;
+  });
+
+  page.addEventListener('pointermove', (e) => {
+    if (!src) return;
+    if (!started && Math.hypot(e.clientX - sx, e.clientY - sy) > 14) {
+      started = true;
+      ghost = src.cloneNode(true);
+      ghost.classList.add('drag-ghost');
+      ghost.removeAttribute('id');
+      document.body.appendChild(ghost);
+      src.classList.add('drag-src');
+    }
+    if (started && ghost) {
+      ghost.style.left = e.clientX + 'px';
+      ghost.style.top = e.clientY + 'px';
+      if (e.cancelable) e.preventDefault();
+    }
+  }, { passive: false });
+
+  const onUp = (e) => {
+    if (src && started) {
+      brDragUsed = true;
+      ghost.style.display = 'none';
+      const target = document.elementFromPoint(e.clientX, e.clientY);
+      const t = target && target.closest ? target.closest('.bslot') : null;
+      const m = BR.byId[src.dataset.mid];
+      const nm = [...BR.r16, ...BR.qf, ...BR.sf, BR.f]
+        .find(q => (BR.feeders[q.id] || []).includes(m.id));
+      if (t && nm) {
+        const side = (BR.feeders[nm.id] || []).indexOf(m.id) === 0 ? 'home' : 'away';
+        if (t.id === `slot-${nm.id}-${side}`) {
+          brDraft[m.id] = src.dataset.code;
+          pruneDraft();
+          try { localStorage.setItem('wc-bracket-draft', JSON.stringify(brDraft)); } catch (err) {}
+          syncTree();
+        }
+      }
+    }
+    cleanup();
+  };
+  page.addEventListener('pointerup', onUp);
+  page.addEventListener('pointercancel', cleanup);
 }
 
 /* ============================================================================
@@ -398,10 +474,13 @@ function showShareOverlay(url) {
   ov.innerHTML = `
     <button class="share-x" type="button" aria-label="Close">✕</button>
     <img class="share-img" src="${url}" alt="My bracket">
-    <p class="share-hint">Press and hold the image to save it to Photos</p>
     <button class="br-btn solid share-go" type="button">Share</button>`;
   document.body.appendChild(ov);
-  const close = () => { ov.remove(); URL.revokeObjectURL(url); };
+  requestAnimationFrame(() => ov.classList.add('show'));
+  const close = () => {
+    ov.classList.remove('show');
+    setTimeout(() => { ov.remove(); URL.revokeObjectURL(url); }, 260);
+  };
   ov.querySelector('.share-x').addEventListener('click', close);
   ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
   ov.querySelector('.share-go').addEventListener('click', async () => {
@@ -498,21 +577,21 @@ async function buildShareImage() {
   }
 
   // final card
-  const cardY = 226, cardH = 380;
+  const cardY = 226, cardH = 410;
   x.save();
   x.shadowColor = 'rgba(17,17,20,.07)'; x.shadowBlur = 30; x.shadowOffsetY = 8;
   x.fillStyle = '#fff';
   x.beginPath(); x.roundRect(64, cardY, W - 128, cardH, 44); x.fill();
   x.restore();
   // trophy (thin line, gold)
-  x.save(); x.translate(W / 2 - 12 * 3.4, cardY + 34); x.scale(3.4, 3.4);
+  x.save(); x.translate(W / 2 - 12 * 3.0, cardY + 26); x.scale(3.0, 3.0);
   x.strokeStyle = '#C7A24A'; x.lineWidth = 1.6; x.lineCap = 'round'; x.lineJoin = 'round';
   x.stroke(new Path2D('M8 21h8M12 17v4'));
   x.stroke(new Path2D('M7 4h10v6a5 5 0 0 1-10 0V4Z'));
   x.stroke(new Path2D('M7 6H4v1a4 4 0 0 0 3 3.87M17 6h3v1a4 4 0 0 1-3 3.87'));
   x.restore();
   const fh = shareSlot(BR.f, 'home'), fa = shareSlot(BR.f, 'away');
-  const fy = cardY + 210;
+  const fy = cardY + 250;
   if (fh.code) flag(258, fy, 66, fh.code, ringFor(BR.f, 'home')); else hole(258, fy, 62);
   if (fa.code) flag(W - 258, fy, 66, fa.code, ringFor(BR.f, 'away')); else hole(W - 258, fy, 62);
   x.fillStyle = '#111114'; x.font = `600 30px ${FONT}`;
@@ -520,10 +599,10 @@ async function buildShareImage() {
   x.fillText(fa.code ? teamName(fa.code) : 'TBD', W - 258, fy + 112);
   if (champ) {
     const cw = brWinner(BR.f);
-    flag(W / 2, fy - 8, 88, champ, cw ? (cw === champ ? '#1F8A5B' : '#D64545') : '#C7A24A', 8);
+    flag(W / 2, fy - 14, 86, champ, cw ? (cw === champ ? '#1F8A5B' : '#D64545') : '#C7A24A', 8);
     x.fillStyle = '#111114'; x.font = `800 38px ${FONT}`;
-    x.fillText(teamName(champ), W / 2, fy + 126);
-  } else { hole(W / 2, fy - 8, 84); }
+    x.fillText(teamName(champ), W / 2, fy + 124);
+  } else { hole(W / 2, fy - 14, 82); }
 
   // tree
   const top = cardY + cardH + 70, bot = H - 120, Ht = bot - top;

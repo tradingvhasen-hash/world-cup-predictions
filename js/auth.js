@@ -1,101 +1,103 @@
 /* ============================================================================
-   AUTH  —  Supabase sign up / sign in / sign out / password reset
-   ----------------------------------------------------------------------------
-   Wraps the Supabase client so the rest of the app only calls simple helpers.
-   The app is gated behind a login screen: when there is no logged-in user we
-   show #auth-screen; once signed in we show the app and the user's email in
-   the menu.
+   AUTH — Supabase sign up / sign in / sign out / password reset.
+   The site is fully browsable without an account. Signing in is only needed
+   to make and save a bracket. The auth screen is an overlay opened from the
+   top-bar "Sign in" button (or when a bracket save requires it).
    ========================================================================== */
 
-/* The Supabase browser client (global `supabase` comes from js/vendor/supabase.js).
-   If that script failed to load we keep sb = null and show a clear message
-   instead of leaving a blank screen. */
 const sb = (window.supabase && window.supabase.createClient)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
-let currentUser = null;   // the signed-in user object, or null
-let appStarted  = false;  // so we only boot the app view once per sign-in
+let currentUser = null;
+let appStarted  = false;
 
-/* ---------- helpers the UI calls ---------- */
-async function doSignUp(email, password) {
-  return sb.auth.signUp({ email, password });
+/* ---------- helpers ---------- */
+async function doSignUp(email, password) { return sb.auth.signUp({ email, password }); }
+async function doSignIn(email, password) { return sb.auth.signInWithPassword({ email, password }); }
+async function doSignOut() { await sb.auth.signOut(); }
+async function doSendReset(email) {
+  return sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
 }
-async function doSignIn(email, password) {
-  return sb.auth.signInWithPassword({ email, password });
-}
-async function doSignOut() {
-  await sb.auth.signOut();
-}
+async function doUpdatePassword(newPassword) { return sb.auth.updateUser({ password: newPassword }); }
 async function doSignInGoogle() {
-  // Redirects to Google, then back to this same page; Supabase completes the
-  // session automatically on return. The redirect target must be listed in
-  // Supabase → Authentication → URL Configuration → Redirect URLs.
   return sb.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo: window.location.origin + window.location.pathname },
   });
 }
-async function doSendReset(email) {
-  // The link in the email brings the user back here; Supabase must allow this
-  // origin in Auth → URL Configuration → Redirect URLs.
-  return sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
+
+/* ---------- overlay ---------- */
+function openAuth() {
+  if (!sb) { alert('Sign-in is unavailable right now.'); return; }
+  showLogin();
+  document.body.classList.add('auth-open');
 }
-async function doUpdatePassword(newPassword) {
-  return sb.auth.updateUser({ password: newPassword });
-}
+function closeAuth() { document.body.classList.remove('auth-open'); }
 
 /* ---------- boot + react to auth changes ---------- */
 async function authBoot() {
-  if (!sb) {
-    document.body.classList.add('logged-out');
-    const screen = document.getElementById('auth-screen');
-    if (screen) screen.innerHTML =
-      `<div class="auth-card"><div class="auth-brand">⚠️ Couldn't start</div>
-       <p class="auth-sub">The sign-in library didn't load. Please refresh the page.</p></div>`;
-    return;
-  }
+  if (!sb) { applyAuthState(); return; }
   const { data } = await sb.auth.getSession();
   currentUser = data.session ? data.session.user : null;
   applyAuthState();
 
+  // Surface OAuth callback errors (e.g. a deleted account trying Google again)
+  if (/error=/.test(window.location.hash)) {
+    const m = /error_description=([^&]+)/.exec(window.location.hash);
+    openAuth();
+    setTimeout(() => authMsg(m ? decodeURIComponent(m[1].replace(/\+/g, ' '))
+      : 'Sign-in failed. This account may have been deleted.', 'err'), 60);
+    history.replaceState(null, '', window.location.pathname);
+  }
+
   sb.auth.onAuthStateChange((event, session) => {
     currentUser = session ? session.user : null;
-    if (event === 'PASSWORD_RECOVERY') { showRecovery(); return; }
+    if (event === 'PASSWORD_RECOVERY') {
+      document.body.classList.add('auth-open');
+      showRecovery();
+      return;
+    }
     applyAuthState();
   });
 }
 
-/* Show either the app or the login screen based on currentUser. */
 function applyAuthState() {
-  const body = document.body;
-  if (currentUser) {
-    body.classList.remove('logged-out');
-    fillMenuUser();
-    // First sign-in of this page load: fetch the user's saved predictions from
-    // the database, then show the app.
-    if (!appStarted) {
-      appStarted = true;
-      loadBracketFromDb().then(() => navigate('home'));
-    }
+  const signedIn = !!currentUser;
+  document.body.classList.toggle('signed-in', signedIn);
+  if (signedIn) closeAuth();
+  fillMenuUser();
+  if (!signedIn) clearBracket();
+
+  if (!appStarted) {
+    appStarted = true;
+    loadBracketFromDb().then(() => { updateScoreStrip(); navigate('home'); });
   } else {
-    body.classList.add('logged-out');
-    appStarted = false;
-    clearPredictions();
-    clearBracket();
-    showLogin();
+    loadBracketFromDb().then(() => {
+      updateScoreStrip();
+      if (currentView === 'profile' && !signedIn) navigate('home');
+      else if (currentView === 'bracket' || currentView === 'profile') navigate(currentView);
+    });
   }
 }
 
-/* Put the signed-in email + a Sign out button in the menu footer. */
+/* menu footer: email + sign out (signed in) or a sign-in button */
 function fillMenuUser() {
   const box = document.getElementById('menu-user');
-  if (!box || !currentUser) return;
-  box.innerHTML = `
-    <div class="menu-email" title="${currentUser.email}">${currentUser.email}</div>
-    <button class="menu-signout" id="signout-btn">Sign out</button>`;
-  document.getElementById('signout-btn').addEventListener('click', async () => {
-    await doSignOut();
-    closeMenu();
-  });
+  if (!box) return;
+  if (currentUser) {
+    box.innerHTML = `
+      <div class="menu-email" title="${currentUser.email}">${currentUser.email}</div>
+      <button class="menu-signout" id="signout-btn">Sign out</button>`;
+    document.getElementById('signout-btn').addEventListener('click', async () => {
+      await doSignOut();
+      closeMenu();
+    });
+  } else {
+    box.innerHTML = `<button class="menu-signin" id="menu-signin">Sign in</button>`;
+    document.getElementById('menu-signin').addEventListener('click', () => {
+      closeMenu();
+      openAuth();
+    });
+  }
 }

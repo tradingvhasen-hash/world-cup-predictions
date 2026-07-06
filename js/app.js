@@ -7,21 +7,24 @@ function fmtDate(iso) {
   const dt = new Date(iso);
   const now = new Date();
   const sameDay = dt.toDateString() === now.toDateString();
-  const time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const time = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   if (sameDay) return `Today ${time}`;
-  const date = dt.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  const date = dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   return `${date} ${time}`;
 }
 
 /* ---------- routing ---------- */
 const VIEWS = {
-  home:    { render: renderHome,    after: bindHome,    title: 'Home' },
-  bracket: { render: renderBracket, after: bindBracket, title: 'Bracket' },
+  home:    { render: renderHome,    after: bindHome,     title: 'Home' },
+  bracket: { render: renderBracket, after: bindBracket,  title: 'Bracket' },
+  profile: { render: renderProfile, after: bindProfile,  title: 'Profile' },
 };
+let currentView = 'home';
 
 function navigate(name) {
   stopLiveEngine();
   stopCountdowns();
+  currentView = VIEWS[name] ? name : 'home';
   const view = VIEWS[name] || VIEWS.home;
   document.getElementById('view').innerHTML = view.render();
   if (view.after) view.after();
@@ -177,6 +180,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('burger-toggle').addEventListener('change', (e) => {
     e.target.checked ? openMenu() : closeMenu();
   });
+  const tbs = document.getElementById('tb-signin');
+  if (tbs) tbs.addEventListener('click', () => openAuth());
   document.getElementById('backdrop').addEventListener('click', closeMenu);
   document.querySelectorAll('.nav').forEach(b =>
     b.addEventListener('click', () => navigate(b.getAttribute('data-nav'))));
@@ -210,4 +215,25 @@ function setupAutoHideBar() {
       ticking = false;
     });
   }, { passive: true });
+}
+
+/* ---------- in-app confirm dialog (replaces browser confirm) ---------- */
+function appConfirm(o) {
+  return new Promise(res => {
+    const ov = document.createElement('div');
+    ov.className = 'modal-ov';
+    ov.innerHTML = `<div class="modal-card">
+      <div class="modal-title">${o.title}</div>
+      ${o.text ? `<p class="modal-text">${o.text}</p>` : ''}
+      <div class="modal-btns">
+        <button class="m-btn ghost" data-m="0">${o.cancel || 'Cancel'}</button>
+        <button class="m-btn ${o.danger ? 'danger' : 'solid'}" data-m="1">${o.ok || 'OK'}</button>
+      </div></div>`;
+    document.body.appendChild(ov);
+    requestAnimationFrame(() => ov.classList.add('show'));
+    const done = v => { ov.classList.remove('show'); setTimeout(() => ov.remove(), 220); res(v); };
+    ov.querySelectorAll('[data-m]').forEach(b =>
+      b.addEventListener('click', () => done(b.getAttribute('data-m') === '1')));
+    ov.addEventListener('click', e => { if (e.target === ov) done(false); });
+  });
 }
