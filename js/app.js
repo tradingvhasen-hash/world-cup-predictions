@@ -96,35 +96,82 @@ async function liveTick() {
   }
 }
 
-/* Feed: newest 3 by default, "show more" reveals the rest. */
+/* ---------- live event feed (Google-style rows) ---------- */
+const SUB_ICON = `<svg class="sub-ic" viewBox="0 0 16 16" fill="none" stroke-width="1.7"
+  stroke-linecap="round" stroke-linejoin="round">
+  <path d="M5.2 13V3.4M5.2 3.4 2.8 5.8M5.2 3.4l2.4 2.4" stroke="#1F8A5B"/>
+  <path d="M10.8 3v9.6m0 0 2.4-2.4m-2.4 2.4-2.4-2.4" stroke="#D64545"/></svg>`;
+
+function parseEvent(e) {
+  const t = (e.typeText || '').toLowerCase();
+  const x = e.text || '';
+  const firstName = (rx) => { const g = rx.exec(x); return g ? g[1].trim() : ''; };
+
+  if (/half|kick ?off|match end|end regular|full time/.test(t) ||
+      /^(start|end).*(half)|^halftime|^kickoff|match ends/i.test(x)) {
+    let label = 'Match update';
+    if (/2nd half|second half/i.test(t + x)) label = 'Second half';
+    else if (/halftime|1st half ends|first half ends/i.test(t + x)) label = 'Half time';
+    else if (/1st half|first half|kick ?off/i.test(t + x)) label = 'Kick-off';
+    else if (/match end|full time|end regular/i.test(t + x)) label = 'Full time';
+    return { kind: 'period', label };
+  }
+  if (t.includes('substitution')) {
+    const g = /\.\s*(.+?)\s+replaces\s+(.+?)\./.exec(x);
+    return { kind: 'sub', title: 'Substitution',
+      main: g ? g[1] : firstName(/^(.+?)\s*\(/) || x,
+      det: g ? `for ${g[2]}` : '' };
+  }
+  if (t.includes('yellow')) return { kind: 'yellow', title: 'Yellow card', main: firstName(/^(.+?)\s*\(/) || x };
+  if (t.includes('red'))    return { kind: 'red', title: 'Red card', main: firstName(/^(.+?)\s*\(/) || x };
+  if (/disallow|var/i.test(x) || t.includes('var'))
+    return { kind: 'var', title: 'VAR', main: x.replace(/\s+/g, ' ').slice(0, 80) };
+  if (t.includes('penalty') && /miss|saved/i.test(x))
+    return { kind: 'miss', title: 'Missed penalty', main: firstName(/\.\s*([^.]+?)\s*\(/) || firstName(/^(.+?)\s*\(/) || x };
+  if (t.includes('goal') || t.includes('penalty')) {
+    const det = /own goal/i.test(x) ? 'Own goal' : /penalt/i.test(x) ? 'Penalty' : '';
+    return { kind: 'goal', title: 'Goal', main: firstName(/\.\s*([^.]+?)\s*\(/) || firstName(/^(.+?)\s*\(/) || x, det };
+  }
+  return { kind: 'info', title: '', main: x.replace(/\s+/g, ' ').slice(0, 90) };
+}
+
 function renderFeed(events, m) {
-  if (!events.length) return `<div class="event"><span class="ev-text muted">No key events yet.</span></div>`;
+  if (!events.length) return `<div class="tl-empty">No key events yet.</div>`;
   const expanded = !!liveExpanded[m.id];
-  const shown = expanded ? events.slice(0, 30) : events.slice(0, 3);
+  const shown = expanded ? events.slice(0, 40) : events.slice(0, 4);
   let html = shown.map(e => feedRow(e, m)).join('');
-  if (events.length > 3) {
+  if (events.length > 4) {
     html += `<button class="feed-toggle" type="button" data-expand="${m.id}">` +
-      (expanded ? 'Show less ▲' : `Show ${events.length - 3} more ▼`) + `</button>`;
+      (expanded ? 'Show less' : 'Show all') + `</button>`;
   }
   return html;
 }
 
 function feedRow(e, m) {
-  const t = (e.typeText || '').toLowerCase();
-  const x = (e.text || '').toLowerCase();
-  let icon = '•';
-  if (t.includes('yellow')) icon = '🟨';
-  else if (t.includes('red')) icon = '🟥';
-  else if (t.includes('substitution')) icon = '🔄';
-  else if (x.includes('disallow') || x.includes('var')) icon = '🚫';
-  else if (t.includes('goal') || t.includes('penalty')) icon = x.includes('miss') ? '❌' : '⚽';
+  const p = parseEvent(e);
+  if (p.kind === 'period') return `<div class="tl-period"><span>${p.label}</span></div>`;
+
+  let icon = '';
+  if (p.kind === 'yellow') icon = '<span class="cardp y"></span>';
+  else if (p.kind === 'red') icon = '<span class="cardp r"></span>';
+  else if (p.kind === 'goal') icon = '<span class="ball-ic">\u26BD</span>';
+  else if (p.kind === 'miss') icon = '<span class="ball-ic miss">\u26BD</span>';
+  else if (p.kind === 'sub') icon = SUB_ICON;
+  else if (p.kind === 'var') icon = '<span class="var-ic">TV</span>';
+
   const code = e.side === 'home' ? m.home : e.side === 'away' ? m.away : null;
-  const flag = code ? flagImg(code, 'flag-xs') : '<span class="flag-xs"></span>';
-  return `<div class="event ev-${e.side || 'none'}">
-    <span class="ev-min">${e.minute || ''}</span>
-    <span class="ev-icon">${icon}</span>
-    ${flag}
-    <span class="ev-text">${e.text || e.typeText}</span>
+  const detBits = [p.title, p.det].filter(Boolean).join(' \u00B7 ');
+  const det = (code || detBits)
+    ? `<div class="tl-det">${code ? flagImg(code, 'flag-xs') : ''}<span>${detBits || teamName(code)}</span></div>`
+    : '';
+
+  return `<div class="tl-ev">
+    <span class="tl-ic">${icon}</span>
+    <div class="tl-body">
+      <div class="tl-main">${p.main}</div>
+      ${det}
+    </div>
+    <span class="tl-time">${e.minute || ''}</span>
   </div>`;
 }
 

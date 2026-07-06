@@ -65,7 +65,7 @@ function brRoundOf(m) {
        : BR.sf.includes(m) ? 'sf' : m === BR.f ? 'f' : 'r32';
 }
 function pickableMatches() {
-  return [...BR.r16, ...BR.qf, ...BR.sf, BR.f].filter(m => m.state === 'pre');
+  return [...BR.r16, ...BR.qf, ...BR.sf, BR.f].filter(m => m.state !== 'post');
 }
 function activePicks() { return brEditing ? brDraft : (userBracket ? userBracket.picks : {}); }
 
@@ -255,7 +255,7 @@ function syncTree() {
       el.classList.toggle('won', !usePicks && !!win && !!code && win === code);
       el.classList.toggle('correct', !brEditing && usePicks && !!info.picked && !!info.real && info.real === info.code);
       el.classList.toggle('wrong', !brEditing && usePicks && !!info.picked && !!info.real && info.real !== info.code);
-      el.classList.toggle('tappable', brEditing && m.state === 'pre' && !!code);
+      el.classList.toggle('tappable', brEditing && m.state !== 'post' && !!code);
     });
   });
   // finalist name labels on the final card
@@ -373,7 +373,7 @@ function bindBracket() {
     const el = ev.target.closest('.bslot');
     if (!el || !el.classList.contains('tappable')) return;
     const m = BR.byId[el.dataset.mid];
-    if (!m || m.state !== 'pre' || !el.dataset.code) return;
+    if (!m || m.state === 'post' || !el.dataset.code) return;
     brDraft[m.id] = el.dataset.code;
     pruneDraft();
     try { localStorage.setItem('wc-bracket-draft', JSON.stringify(brDraft)); } catch (e) {}

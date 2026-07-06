@@ -644,3 +644,26 @@ body.auth-open .auth-screen{
   filter:drop-shadow(0 8px 18px rgba(0,0,0,.25));
 }
 .drag-src{opacity:.35}
+
+/* ---------- live event feed (Google-style rows) ---------- */
+.tl-empty{font-size:.78rem; color:var(--muted); text-align:center; padding:10px 0 4px}
+.tl-ev{display:flex; align-items:center; gap:11px; padding:10px 2px}
+.tl-ev + .tl-ev, .tl-period + .tl-ev, .tl-ev + .tl-period{border-top:1px solid var(--line)}
+.tl-ic{width:20px; display:flex; align-items:center; justify-content:center; flex:none}
+.cardp{width:10px; height:14px; border-radius:2.5px; display:block}
+.cardp.y{background:#F2C214}
+.cardp.r{background:var(--live)}
+.ball-ic{font-size:.85rem; line-height:1}
+.ball-ic.miss{opacity:.4}
+.sub-ic{width:16px; height:16px; display:block}
+.var-ic{font-size:.5rem; font-weight:800; letter-spacing:.05em; color:var(--muted);
+  border:1.3px solid var(--muted); border-radius:4px; padding:1px 3px}
+.tl-body{flex:1; min-width:0}
+.tl-main{font-size:.82rem; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.tl-det{display:flex; align-items:center; gap:5px; font-size:.68rem; color:var(--muted); margin-top:2px}
+.tl-det .flag-xs, .tl-det .fwrap.flag-xs{width:12px; height:12px; flex:none}
+.tl-time{font-size:.72rem; font-weight:700; color:var(--muted);
+  font-variant-numeric:tabular-nums; flex:none}
+.tl-period{display:flex; align-items:center; gap:12px; justify-content:center; padding:9px 0;
+  font-size:.6rem; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+.tl-period::before, .tl-period::after{content:""; flex:1; height:1px; background:var(--line)}

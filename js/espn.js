@@ -86,9 +86,7 @@ function hasRealTeams(m) {
 function isNoiseEvent(e) {
   const t = (e.typeText || '').toLowerCase();
   const x = (e.text || '').toLowerCase();
-  return t.includes('delay') || x.includes('delay') || x.includes('drinks break') ||
-         x.includes('first half begins') || x.includes('second half begins') ||
-         x.includes('first half ends') || x.includes('match ends') || x.includes('kickoff');
+  return t.includes('delay') || x.includes('delay') || x.includes('drinks break');
 }
 
 /* Per-match live events (goals, cards, subs, VAR) newest-first, noise removed. */
