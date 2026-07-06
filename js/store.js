@@ -52,6 +52,29 @@ async function setPrediction(matchId, home, away) {
   return true;
 }
 
+/* ---------- the user's saved bracket (permanent once saved) ---------- */
+let userBracket = null;   // { picks:{eventId:teamCode}, saved_at } or null
+
+async function loadBracketFromDb() {
+  userBracket = null;
+  if (!sb || !currentUser) return;
+  const { data, error } = await sb.from('brackets')
+    .select('picks, saved_at').eq('user_id', currentUser.id).maybeSingle();
+  if (error) { console.warn('Could not load bracket:', error.message); return; }
+  if (data) userBracket = { picks: data.picks || {}, saved_at: data.saved_at };
+}
+
+async function saveBracketToDb(picks) {
+  if (!sb || !currentUser) return { ok: false, msg: 'You must be signed in.' };
+  const { error } = await sb.from('brackets')
+    .insert({ user_id: currentUser.id, picks });
+  if (error) return { ok: false, msg: error.message };
+  userBracket = { picks, saved_at: new Date().toISOString() };
+  return { ok: true };
+}
+
+function clearBracket() { userBracket = null; }
+
 /* Given a prediction and a finished match, return points + a verdict. */
 function scorePrediction(pred, match) {
   if (!pred || match.status !== 'finished') return { points: 0, verdict: 'pending' };

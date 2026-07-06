@@ -15,11 +15,8 @@ function fmtDate(iso) {
 
 /* ---------- routing ---------- */
 const VIEWS = {
-  home:    { render: renderHome,    after: bindHome,     title: 'Home' },
-  results: { render: renderResults, after: bindResults,  title: 'Results' },
-  lineups: { render: renderLineups, after: bindLineups,  title: 'Lineups' },
-  bracket: { render: renderBracket, after: null,         title: 'Bracket' },
-  score:   { render: renderScore,   after: null,         title: 'My Score' },
+  home:    { render: renderHome,    after: bindHome,    title: 'Home' },
+  bracket: { render: renderBracket, after: bindBracket, title: 'Bracket' },
 };
 
 function navigate(name) {
@@ -36,7 +33,9 @@ function navigate(name) {
 
 function updateScoreStrip() {
   const el = document.getElementById('menu-points');
-  if (el) el.textContent = `${totalScore()} pts`;
+  if (!el) return;
+  const s = (typeof bracketScore === 'function' && BR && userBracket) ? bracketScore() : null;
+  el.textContent = s ? `${s.got} pts` : 'World Cup ’26';
 }
 
 /* ---------- hamburger menu ---------- */

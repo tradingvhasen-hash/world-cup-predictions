@@ -76,12 +76,13 @@ function applyAuthState() {
     // the database, then show the app.
     if (!appStarted) {
       appStarted = true;
-      loadPredictionsFromDb().then(() => navigate('home'));
+      loadBracketFromDb().then(() => navigate('home'));
     }
   } else {
     body.classList.add('logged-out');
     appStarted = false;
     clearPredictions();
+    clearBracket();
     showLogin();
   }
 }

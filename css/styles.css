@@ -196,6 +196,78 @@ button.gteam:active .flag{transform:scale(.86)}
 }
 .hero .live-pill{display:flex; justify-content:center}
 
+.hero-cdbig{font-size:1.5rem; font-weight:800; letter-spacing:-.01em; color:var(--ink);
+  font-variant-numeric:tabular-nums}
+
+/* ============================================================
+   BRACKET
+   ============================================================ */
+.br-bar{margin:14px 2px 4px; text-align:center}
+.br-btn{
+  border:none; border-radius:14px; padding:13px 22px; font-size:.95rem; font-weight:600;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.br-btn.solid{background:var(--green); color:#fff}
+.br-btn.solid:disabled{opacity:.4}
+.br-btn.ghost{background:var(--card); color:var(--ink); box-shadow:var(--shadow)}
+.br-btn.wide{width:100%}
+.br-actions{display:flex; gap:8px; justify-content:center}
+.br-actions .br-btn{flex:1}
+.br-note{font-size:.7rem; color:var(--muted); margin:10px 4px 0}
+.br-progress{font-size:.78rem; font-weight:600; color:var(--muted); margin-bottom:10px}
+.br-score{display:flex; align-items:baseline; justify-content:center; gap:6px}
+.br-pts{font-size:2.4rem; font-weight:800; letter-spacing:-.02em}
+.br-max{font-size:.9rem; font-weight:600; color:var(--muted)}
+.br-sub{font-size:.72rem; color:var(--muted); margin:2px 0 12px}
+.seg{display:flex; background:rgba(17,17,20,.05); border-radius:12px; padding:3px;
+  max-width:260px; margin:0 auto}
+.seg-btn{flex:1; border:none; background:none; padding:8px; border-radius:10px;
+  font-size:.82rem; font-weight:600; color:var(--muted); cursor:pointer}
+.seg-btn.on{background:var(--card); color:var(--ink); box-shadow:var(--shadow)}
+
+.br-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:16px -18px 0; padding:0 14px}
+.bracket{
+  display:flex; align-items:stretch; gap:5px;
+  min-width:340px; max-width:560px; height:620px; margin:0 auto; padding:6px 0 18px;
+}
+.bcol{flex:1; display:flex; flex-direction:column; justify-content:space-around; min-width:0}
+.bcol.centre{flex:1.35; justify-content:center; align-items:center; gap:18px}
+.bpair{position:relative; display:flex; flex-direction:column; gap:7px; align-items:center; padding:5px 0}
+.bpair.l::after{
+  content:""; position:absolute; right:-4px; top:24%; bottom:24%; width:4px;
+  border:1px solid var(--line); border-left:none; border-radius:0 5px 5px 0;
+}
+.bpair.r::after{
+  content:""; position:absolute; left:-4px; top:24%; bottom:24%; width:4px;
+  border:1px solid var(--line); border-right:none; border-radius:5px 0 0 5px;
+}
+.bslot{
+  width:30px; height:30px; border-radius:50%; border:none; background:none; padding:0;
+  display:flex; align-items:center; justify-content:center; flex:none; cursor:default;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+}
+.bslot[data-pick]{cursor:pointer}
+.bslot[data-pick]:active .bflag{transform:scale(.86)}
+.bslot.empty{border:1.5px dashed #D9D9DE; background:var(--card)}
+.bflag{width:30px; height:30px; border-radius:50%; object-fit:cover; display:block;
+  box-shadow:inset 0 0 0 1px rgba(17,17,20,.07); transition:transform .12s ease; pointer-events:none}
+.flag-fallback.bflag{width:30px; height:30px; font-size:.5rem; pointer-events:none}
+.bslot.lost .bflag{filter:grayscale(1); opacity:.32}
+.bslot.sel{box-shadow:0 0 0 2.5px var(--green); border-radius:50%}
+.bslot.pickmark{box-shadow:0 0 0 2px rgba(17,17,20,.14); border-radius:50%}
+.bslot.correct{box-shadow:0 0 0 2.5px var(--good); border-radius:50%}
+.bslot.wrong{box-shadow:0 0 0 2.5px var(--bad); border-radius:50%}
+.bslot.wrong .bflag{opacity:.45}
+.champ-wrap{display:flex; flex-direction:column; align-items:center; gap:8px}
+.trophy{width:26px; height:26px}
+.champ{
+  width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 0 2.5px #C7A24A;
+}
+.champ.empty{box-shadow:none; border:1.5px dashed #D9C89E}
+.champ .bflag{width:46px; height:46px}
+.bcol.centre .bslot, .bcol.centre .bslot .bflag{width:34px; height:34px}
+
 /* ---------- live dot ---------- */
 .live-dot{width:7px; height:7px; border-radius:50%; background:var(--live); flex:none;
   animation:pulse 1.6s infinite}

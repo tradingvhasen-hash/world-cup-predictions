@@ -110,6 +110,36 @@ async function espnFetchEvents(eventId) {
   }
 }
 
+/* ---------- knockout bracket data ----------
+   Fixed window covering the whole 2026 knockout stage (R32 → Final).
+   Returns matches sorted by kickoff; classification into rounds is by count:
+   16 R32, 8 R16, 4 QF, 2 SF, then 3rd-place match, then the Final. */
+const KO_DATES = '20260628-20260721';
+
+async function espnFetchKnockout() {
+  const res = await fetch(`${ESPN_BASE}/scoreboard?dates=${KO_DATES}`);
+  if (!res.ok) throw new Error('ESPN knockout ' + res.status);
+  const j = await res.json();
+  const list = (j.events || []).map((ev) => {
+    const c = ev.competitions[0];
+    const H = c.competitors.find((x) => x.homeAway === 'home');
+    const A = c.competitors.find((x) => x.homeAway === 'away');
+    const note = (c.notes && c.notes[0] && c.notes[0].headline) || '';
+    return {
+      id: String(ev.id),
+      date: ev.date,
+      state: ev.status.type.state,               // pre | in | post
+      home: registerTeam(H.team), away: registerTeam(A.team),
+      homeName: H.team.displayName, awayName: A.team.displayName,
+      homeReal: !!teamLogo(H.team), awayReal: !!teamLogo(A.team),
+      homeScore: Number(H.score), awayScore: Number(A.score),
+      homeWin: H.winner === true, awayWin: A.winner === true,
+      note,
+    };
+  }).sort((a, b) => new Date(a.date) - new Date(b.date));
+  return list;
+}
+
 function espnHomeTeamId(summary) {
   const comps = summary.header && summary.header.competitions && summary.header.competitions[0];
   const c = comps && comps.competitors && comps.competitors.find((x) => x.homeAway === 'home');
