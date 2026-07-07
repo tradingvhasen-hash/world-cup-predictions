@@ -167,9 +167,8 @@ function frRow(e) {
   else if (p.kind === 'red') icon = '<span class="cardp r"></span>';
   else if (p.kind === 'goal') icon = '<span class="ball-ic">\u26BD</span>';
   else if (p.kind === 'sub') icon = SUB_ICON;
-  const suf = p.kind === 'sub' && p.det ? `<span class="suf">${p.det}</span>`
-            : p.det ? `<span class="suf">${p.det}</span>` : '';
-  return `<div class="fr ${e.side === 'away' ? 'away' : 'home'}">
+  const suf = p.det ? `<span class="suf">${p.det}</span>` : '';
+  return `<div class="fr">
     <span class="fr-ic">${icon}</span>
     <span class="name">${p.main}</span>${suf}
     <span class="min">${e.minute || ''}</span>
