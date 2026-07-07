@@ -668,25 +668,15 @@ body.auth-open .auth-screen{
   font-size:.6rem; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
 .tl-period::before, .tl-period::after{content:""; flex:1; height:1px; background:var(--line)}
 
-/* ---------- live: scorers under teams + one-line event rows ---------- */
-.hero-scorers{display:flex; flex-direction:column; gap:4px; margin-top:12px; min-width:0}
+/* ---------- live: every event is one small line under its team ---------- */
+.hero-scorers{display:flex; flex-direction:column; gap:6px; margin-top:12px; min-width:0}
 .hero-scorers.r{align-items:flex-end}
-.sc{display:flex; align-items:center; gap:5px; max-width:100%;
+.sc{display:flex; align-items:center; gap:6px; max-width:100%;
   font-size:.68rem; color:var(--muted)}
-.sc .b{font-size:.56rem; opacity:.8}
+.sc .b{font-size:.56rem; opacity:.8; flex:none}
+.sc .scard{width:7px; height:10px; border-radius:2px; flex:none}
+.sc .scard.y{background:#F2C214}
+.sc .scard.r{background:var(--live)}
+.sc .sub-ic{width:11px; height:11px; flex:none}
 .sc-n{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; color:var(--ink)}
 .sc-m{flex:none}
-/* Every event row reads the same way: icon left, name, time on the far right. */
-.fr{display:flex; align-items:center; gap:9px; padding:8px 0; font-size:.8rem; min-width:0}
-.fr + .fr, .fr-ht + .fr, .fr + .fr-ht{border-top:1px solid var(--line)}
-.fr-ic{width:16px; height:16px; display:flex; align-items:center; justify-content:center; flex:none}
-.fr-ic .ball-ic{font-size:.8rem}
-.fr-ic .sub-ic{width:15px; height:15px}
-.fr .name{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.fr .suf{color:var(--muted); font-size:.68rem; flex:none;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.fr .min{color:var(--muted); font-size:.68rem; font-weight:600; flex:none; margin-left:auto;
-  padding-left:8px; font-variant-numeric:tabular-nums}
-.fr-ht{display:flex; align-items:center; gap:12px; justify-content:center; padding:8px 0;
-  font-size:.56rem; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--muted)}
-.fr-ht::before, .fr-ht::after{content:""; flex:1; height:1px; background:var(--line)}

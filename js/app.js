@@ -131,59 +131,51 @@ function parseEvent(e) {
   return { kind: 'info', title: '', main: x.replace(/\s+/g, ' ').slice(0, 90) };
 }
 
-/* Scorers under each team (the default, Apple-quiet view). */
-function scorersHtml(events, side) {
-  const list = events.slice().reverse().filter(e => e.side === side && parseEvent(e).kind === 'goal');
-  if (!list.length) return '';
-  return list.map(e => {
-    const p = parseEvent(e);
-    const tag = /Penalty/.test(p.det || '') ? ' (P)' : /Own goal/.test(p.det || '') ? ' (OG)' : '';
-    return `<div class="sc"><span class="b">\u26BD</span><span class="sc-n">${p.main}</span><span class="sc-m">${e.minute || ''}${tag}</span></div>`;
-  }).join('');
-}
-
-/* Collapsed: nothing but a quiet "All events" line. Expanded: one line per
-   event, home events on the left, away on the right. */
-function renderFeed(events, m) {
-  const keep = events.filter(e => {
-    const k = parseEvent(e).kind;
-    if (k === 'period') return /Half time/.test(parseEvent(e).label);
-    return k === 'goal' || k === 'yellow' || k === 'red' || k === 'sub';
-  });
-  if (!keep.length) return '';
-  const expanded = !!liveExpanded[m.id];
-  if (!expanded) {
-    return `<button class="feed-toggle" type="button" data-expand="${m.id}">All events</button>`;
-  }
-  return keep.map(e => frRow(e)).join('') +
-    `<button class="feed-toggle" type="button" data-expand="${m.id}">Hide events</button>`;
-}
-
-function frRow(e) {
+/* The one and only event style: a small line \u2014 icon, name, minute. Used for
+   both the default scorers and (when expanded) every other event too. */
+function evLine(e) {
   const p = parseEvent(e);
-  if (p.kind === 'period') return `<div class="fr-ht"><span>Half time</span></div>`;
-  let icon = '';
-  if (p.kind === 'yellow') icon = '<span class="cardp y"></span>';
-  else if (p.kind === 'red') icon = '<span class="cardp r"></span>';
-  else if (p.kind === 'goal') icon = '<span class="ball-ic">\u26BD</span>';
+  let icon = '<span class="b">\u26BD</span>';
+  if (p.kind === 'yellow') icon = '<span class="scard y"></span>';
+  else if (p.kind === 'red') icon = '<span class="scard r"></span>';
   else if (p.kind === 'sub') icon = SUB_ICON;
-  const suf = p.det ? `<span class="suf">${p.det}</span>` : '';
-  return `<div class="fr">
-    <span class="fr-ic">${icon}</span>
-    <span class="name">${p.main}</span>${suf}
-    <span class="min">${e.minute || ''}</span>
-  </div>`;
+  let tag = '';
+  if (p.kind === 'goal') tag = /Penalty/.test(p.det || '') ? ' (P)' : /Own goal/.test(p.det || '') ? ' (OG)' : '';
+  return `<div class="sc">${icon}<span class="sc-n">${p.main}</span><span class="sc-m">${e.minute || ''}${tag}</span></div>`;
 }
 
-/* Push fresh events into a live card: scorers under the teams + the feed. */
+/* One team's events, newest last. Collapsed shows only goals; expanded adds
+   cards and subs \u2014 all in the exact same small line style. */
+function sideLines(events, side, expanded) {
+  const list = events.slice().reverse().filter(e => {
+    if (e.side !== side) return false;
+    const k = parseEvent(e).kind;
+    return expanded ? (k === 'goal' || k === 'yellow' || k === 'red' || k === 'sub') : k === 'goal';
+  });
+  return list.map(evLine).join('');
+}
+
+/* The quiet toggle line under the two columns \u2014 only when there's more to show. */
+function feedToggle(events, m) {
+  const hasMore = events.some(e => {
+    const k = parseEvent(e).kind;
+    return k === 'yellow' || k === 'red' || k === 'sub';
+  });
+  if (!hasMore) return '';
+  const expanded = !!liveExpanded[m.id];
+  return `<button class="feed-toggle" type="button" data-expand="${m.id}">${expanded ? 'Hide events' : 'All events'}</button>`;
+}
+
+/* Push fresh events into a live card: each team's events + the toggle line. */
 function updateLiveUI(m, evs) {
+  const exp = !!liveExpanded[m.id];
   const sh = document.getElementById('sc-h-' + m.id);
   const sa = document.getElementById('sc-a-' + m.id);
-  if (sh) sh.innerHTML = scorersHtml(evs, 'home');
-  if (sa) sa.innerHTML = scorersHtml(evs, 'away');
+  if (sh) sh.innerHTML = sideLines(evs, 'home', exp);
+  if (sa) sa.innerHTML = sideLines(evs, 'away', exp);
   const feed = document.getElementById('feed-' + m.id);
   if (feed) {
-    const html = renderFeed(evs, m);
+    const html = feedToggle(evs, m);
     if (html !== lastFeedHtml[m.id]) { feed.innerHTML = html; lastFeedHtml[m.id] = html; }
   }
 }
