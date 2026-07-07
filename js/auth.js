@@ -14,8 +14,12 @@ let appStarted  = false;
 
 /* ---------- helpers ---------- */
 async function doSignUp(email, password, fullName) {
-  return sb.auth.signUp({ email, password,
-    options: fullName ? { data: { full_name: fullName } } : undefined });
+  // Send the confirmation link back to THIS page (the project lives under a
+  // /world-cup-predictions/ path, not the domain root) so clicking it doesn't 404.
+  const emailRedirectTo = window.location.origin + window.location.pathname;
+  const options = { emailRedirectTo };
+  if (fullName) options.data = { full_name: fullName };
+  return sb.auth.signUp({ email, password, options });
 }
 async function doSignIn(email, password) { return sb.auth.signInWithPassword({ email, password }); }
 async function doSignOut() { await sb.auth.signOut(); }
