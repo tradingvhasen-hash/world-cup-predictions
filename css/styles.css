@@ -667,3 +667,24 @@ body.auth-open .auth-screen{
 .tl-period{display:flex; align-items:center; gap:12px; justify-content:center; padding:9px 0;
   font-size:.6rem; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
 .tl-period::before, .tl-period::after{content:""; flex:1; height:1px; background:var(--line)}
+
+/* ---------- live: scorers under teams + one-line event rows ---------- */
+.hero-scorers{display:flex; flex-direction:column; gap:4px; margin-top:12px; min-width:0}
+.hero-scorers.r{align-items:flex-end}
+.sc{display:flex; align-items:center; gap:5px; max-width:100%;
+  font-size:.68rem; color:var(--muted)}
+.sc .b{font-size:.56rem; opacity:.8}
+.sc-n{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; color:var(--ink)}
+.sc-m{flex:none}
+.fr{display:flex; align-items:center; gap:7px; padding:7px 0; font-size:.8rem; min-width:0}
+.fr + .fr, .fr-ht + .fr, .fr + .fr-ht{border-top:1px solid var(--line)}
+.fr.away{flex-direction:row-reverse; text-align:right}
+.fr-ic{width:18px; display:flex; align-items:center; justify-content:center; flex:none}
+.fr.away .fr-ic{justify-content:center}
+.fr .name{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.fr .suf{color:var(--muted); font-size:.68rem; flex:none}
+.fr .min{color:var(--muted); font-size:.68rem; font-weight:600; flex:none;
+  font-variant-numeric:tabular-nums}
+.fr-ht{display:flex; align-items:center; gap:12px; justify-content:center; padding:8px 0;
+  font-size:.56rem; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--muted)}
+.fr-ht::before, .fr-ht::after{content:""; flex:1; height:1px; background:var(--line)}

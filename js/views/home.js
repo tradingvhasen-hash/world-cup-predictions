@@ -70,6 +70,9 @@ function liveHero(m) {
         <div class="hero-sub"><span class="min" id="min-${m.id}">${m.minute || ''}</span></div>
       </div>
       <div class="hero-team">${flagImg(m.away, 'flag')}<span>${teamName(m.away)}</span></div>
+      <div class="hero-scorers l" id="sc-h-${m.id}"></div>
+      <div></div>
+      <div class="hero-scorers r" id="sc-a-${m.id}"></div>
     </div>
     <div class="event-feed" id="feed-${m.id}"></div>
   </section>`;

@@ -88,11 +88,7 @@ async function liveTick() {
     if (asEl) asEl.textContent = m.awayScore ?? 0;
     if (minEl) minEl.textContent = m.minute || 'LIVE';
 
-    const feed = document.getElementById('feed-' + m.id);
-    if (feed) {
-      const html = renderFeed(await espnFetchEvents(m.id), m);
-      if (html !== lastFeedHtml[m.id]) { feed.innerHTML = html; lastFeedHtml[m.id] = html; }
-    }
+    updateLiveUI(m, await espnFetchEvents(m.id));
   }
 }
 
@@ -135,54 +131,68 @@ function parseEvent(e) {
   return { kind: 'info', title: '', main: x.replace(/\s+/g, ' ').slice(0, 90) };
 }
 
-function renderFeed(events, m) {
-  if (!events.length) return `<div class="tl-empty">No key events yet.</div>`;
-  const expanded = !!liveExpanded[m.id];
-  const shown = expanded ? events.slice(0, 40) : events.slice(0, 4);
-  let html = shown.map(e => feedRow(e, m)).join('');
-  if (events.length > 4) {
-    html += `<button class="feed-toggle" type="button" data-expand="${m.id}">` +
-      (expanded ? 'Show less' : 'Show all') + `</button>`;
-  }
-  return html;
+/* Scorers under each team (the default, Apple-quiet view). */
+function scorersHtml(events, side) {
+  const list = events.slice().reverse().filter(e => e.side === side && parseEvent(e).kind === 'goal');
+  if (!list.length) return '';
+  return list.map(e => {
+    const p = parseEvent(e);
+    const tag = /Penalty/.test(p.det || '') ? ' (P)' : /Own goal/.test(p.det || '') ? ' (OG)' : '';
+    return `<div class="sc"><span class="b">\u26BD</span><span class="sc-n">${p.main}</span><span class="sc-m">${e.minute || ''}${tag}</span></div>`;
+  }).join('');
 }
 
-function feedRow(e, m) {
-  const p = parseEvent(e);
-  if (p.kind === 'period') return `<div class="tl-period"><span>${p.label}</span></div>`;
+/* Collapsed: nothing but a quiet "All events" line. Expanded: one line per
+   event, home events on the left, away on the right. */
+function renderFeed(events, m) {
+  const keep = events.filter(e => {
+    const k = parseEvent(e).kind;
+    if (k === 'period') return /Half time/.test(parseEvent(e).label);
+    return k === 'goal' || k === 'yellow' || k === 'red' || k === 'sub';
+  });
+  if (!keep.length) return '';
+  const expanded = !!liveExpanded[m.id];
+  if (!expanded) {
+    return `<button class="feed-toggle" type="button" data-expand="${m.id}">All events</button>`;
+  }
+  return keep.map(e => frRow(e)).join('') +
+    `<button class="feed-toggle" type="button" data-expand="${m.id}">Hide events</button>`;
+}
 
+function frRow(e) {
+  const p = parseEvent(e);
+  if (p.kind === 'period') return `<div class="fr-ht"><span>Half time</span></div>`;
   let icon = '';
   if (p.kind === 'yellow') icon = '<span class="cardp y"></span>';
   else if (p.kind === 'red') icon = '<span class="cardp r"></span>';
   else if (p.kind === 'goal') icon = '<span class="ball-ic">\u26BD</span>';
-  else if (p.kind === 'miss') icon = '<span class="ball-ic miss">\u26BD</span>';
   else if (p.kind === 'sub') icon = SUB_ICON;
-  else if (p.kind === 'var') icon = '<span class="var-ic">TV</span>';
-
-  const code = e.side === 'home' ? m.home : e.side === 'away' ? m.away : null;
-  const detBits = [p.title, p.det].filter(Boolean).join(' \u00B7 ');
-  const det = (code || detBits)
-    ? `<div class="tl-det">${code ? flagImg(code, 'flag-xs') : ''}<span>${detBits || teamName(code)}</span></div>`
-    : '';
-
-  return `<div class="tl-ev">
-    <span class="tl-ic">${icon}</span>
-    <div class="tl-body">
-      <div class="tl-main">${p.main}</div>
-      ${det}
-    </div>
-    <span class="tl-time">${e.minute || ''}</span>
+  const suf = p.kind === 'sub' && p.det ? `<span class="suf">${p.det}</span>`
+            : p.det ? `<span class="suf">${p.det}</span>` : '';
+  return `<div class="fr ${e.side === 'away' ? 'away' : 'home'}">
+    <span class="fr-ic">${icon}</span>
+    <span class="name">${p.main}</span>${suf}
+    <span class="min">${e.minute || ''}</span>
   </div>`;
+}
+
+/* Push fresh events into a live card: scorers under the teams + the feed. */
+function updateLiveUI(m, evs) {
+  const sh = document.getElementById('sc-h-' + m.id);
+  const sa = document.getElementById('sc-a-' + m.id);
+  if (sh) sh.innerHTML = scorersHtml(evs, 'home');
+  if (sa) sa.innerHTML = scorersHtml(evs, 'away');
+  const feed = document.getElementById('feed-' + m.id);
+  if (feed) {
+    const html = renderFeed(evs, m);
+    if (html !== lastFeedHtml[m.id]) { feed.innerHTML = html; lastFeedHtml[m.id] = html; }
+  }
 }
 
 function toggleFeed(id) {
   liveExpanded[id] = !liveExpanded[id];
-  const feed = document.getElementById('feed-' + id);
   const m = MATCHES.find(x => x.id === id);
-  if (feed && m) espnFetchEvents(id).then(evs => {
-    feed.innerHTML = renderFeed(evs, m);
-    lastFeedHtml[id] = feed.innerHTML;
-  });
+  if (m) espnFetchEvents(id).then(evs => { lastFeedHtml[id] = null; updateLiveUI(m, evs); });
 }
 
 /* ---------- countdown to kickoff (upcoming cards) ---------- */
