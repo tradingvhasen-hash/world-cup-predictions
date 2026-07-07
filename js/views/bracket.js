@@ -5,7 +5,8 @@
    · Live view: real state — winners advance, losers fade, future = soft rings.
    · Edit: tap a flag to send that team through; picks flow across the tree
      with surgical DOM updates (no re-render, no blink). Save once — forever.
-   · Score: R16 1 · QF 2 · SF 4 · Final 8 per correct pick.
+   · Score: 1 point per correct pick, out of however many matches were still
+     unplayed when the bracket was saved (shown on the site, not the image).
    ========================================================================== */
 
 let BR = null;
@@ -13,8 +14,6 @@ let brView = 'live';       // 'live' | 'picks'
 let brEditing = false;
 let brDraft = {};
 let brError = false;
-
-const BR_W = { r16: 1, qf: 2, sf: 4, f: 8 };
 
 /* ---------- data ---------- */
 async function loadBracketData() {
@@ -84,17 +83,20 @@ function slotInfo(m, side, usePicks) {
   return w ? { code: w } : { code: null };
 }
 
+/* One point per correct pick. The denominator is however many matches were
+   still to be played when the bracket was saved — you only ever pick (and are
+   scored on) matches that hadn't finished yet, so saving early = a bigger
+   possible score, saving late = a smaller one. */
 function bracketScore() {
   if (!BR || !userBracket) return null;
-  let got = 0, max = 0, decided = 0, total = 0;
+  let got = 0, decided = 0, total = 0;
   for (const [id, code] of Object.entries(userBracket.picks)) {
     const m = BR.byId[id]; if (!m) continue;
-    const w = BR_W[brRoundOf(m)] || 1;
-    max += w; total++;
+    total++;
     const win = brWinner(m);
-    if (win) { decided++; if (win === code) got += w; }
+    if (win) { decided++; if (win === code) got++; }
   }
-  return { got, max, decided, total };
+  return { got, max: total, decided, total };
 }
 
 /* first round that still has undecided matches — earlier rounds are hidden */
@@ -119,8 +121,8 @@ function renderBracket() {
   } else if (userBracket) {
     const s = bracketScore();
     head = `<div class="br-bar">
-      <div class="br-score"><span class="br-pts">${s.got}</span><span class="br-max">/ ${s.max} pts</span></div>
-      <div class="br-sub">${s.decided} of ${s.total} picks decided</div>
+      <div class="br-score"><span class="br-pts">${s.got}</span><span class="br-max">/ ${s.max}</span></div>
+      <div class="br-sub">${s.decided} of ${s.total} matches played</div>
       <div class="seg">
         <button class="seg-btn ${brView === 'live' ? 'on' : ''}" data-view="live">Live</button>
         <button class="seg-btn ${brView === 'picks' ? 'on' : ''}" data-view="picks">My picks</button>
@@ -559,28 +561,20 @@ async function buildShareImage() {
   // background
   x.fillStyle = '#F4F4F6'; x.fillRect(0, 0, W, H);
 
-  // header: the person's name is the hero when set
+  // header: a small label, then the person's name as the hero (no score — the
+  // score lives on the site, not on the shared image)
   const md = (currentUser && currentUser.user_metadata) || {};
   const who = (md.full_name || md.name || '').trim();
-  const s = bracketScore();
   x.textAlign = 'center';
+  x.fillStyle = '#8A8A90'; x.font = `600 25px ${FONT}`;
+  try { x.letterSpacing = '7px'; } catch (e) {}
+  x.fillText('WORLD CUP ’26 · PREDICTION', W / 2, 108);
+  try { x.letterSpacing = '0px'; } catch (e) {}
+  x.fillStyle = '#111114';
   if (who) {
-    x.fillStyle = '#8A8A90'; x.font = `600 25px ${FONT}`;
-    try { x.letterSpacing = '7px'; } catch (e) {}
-    x.fillText('WORLD CUP ’26 · MY BRACKET', W / 2, 104);
-    try { x.letterSpacing = '0px'; } catch (e) {}
-    x.fillStyle = '#111114';
-    const whoFit = fitText(who, 920, 60, 40, 800);
-    x.fillText(whoFit, W / 2, 178);
-    if (s && s.decided) {
-      x.fillStyle = '#8A8A90'; x.font = `600 30px ${FONT}`;
-      x.fillText(`${s.got} pts`, W / 2, 222);
-    }
+    x.fillText(fitText(who, 920, 60, 40, 800), W / 2, 186);
   } else {
-    x.fillStyle = '#111114';
-    x.font = `800 54px ${FONT}`; x.fillText('World Cup ’26', W / 2, 130);
-    x.fillStyle = '#8A8A90'; x.font = `600 32px ${FONT}`;
-    x.fillText(s && s.decided ? `My bracket · ${s.got} pts` : 'My bracket', W / 2, 182);
+    x.font = `800 56px ${FONT}`; x.fillText('My bracket', W / 2, 188);
   }
 
   // flag helper: white pad ring + clipped, over-scaled image (crops bands)
@@ -679,10 +673,6 @@ async function buildShareImage() {
   }
   drawHalf(colsL, false);
   drawHalf(colsR, true);
-
-  // footer wordmark
-  x.fillStyle = '#B4B4BA'; x.font = `600 26px ${FONT}`;
-  x.fillText('World Cup ’26 · Predictions', W / 2, H - 52);
 
   return await new Promise((res, rej) =>
     cv.toBlob(b => b ? res(b) : rej(new Error('blob')), 'image/jpeg', 0.92));
